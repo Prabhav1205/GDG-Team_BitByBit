@@ -27,6 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccessHeader } from './AccessHeader';
 import { KioskIcon, type IconName } from './KioskIcon';
 import { useSession, type CommunicationMode } from '@/context/SessionContext';
+import { useAudioNav } from '@/context/AudioNavContext';
 import {
   AccessColors,
   AccessSpacing,
@@ -53,8 +54,14 @@ export function ModePage({
   subtitle,
 }: ModePageProps) {
   const { clearSession } = useSession();
+  const { announce } = useAudioNav();
+
+  React.useEffect(() => {
+    announce(`${title} mode active. ${subtitle}`);
+  }, [announce, title, subtitle]);
 
   function handleBack() {
+    announce('Returning to main menu');
     clearSession();
     router.replace('/');
   }
@@ -69,7 +76,7 @@ export function ModePage({
         <View style={styles.navBar}>
           <Pressable
             onPress={handleBack}
-            style={({ pressed, focused }) => [
+            style={({ pressed, focused }: any) => [
               styles.backBtn,
               pressed && styles.backBtnPressed,
               focused && styles.backBtnFocused,

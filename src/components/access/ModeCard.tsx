@@ -21,7 +21,6 @@ import {
   Pressable,
   StyleSheet,
   Platform,
-  Animated,
 } from 'react-native';
 
 import { KioskIcon, type IconName } from './KioskIcon';
@@ -48,6 +47,8 @@ export interface ModeCardProps {
   onSelect: () => void;
   /** Unique test/accessibility ID. */
   testID?: string;
+  /** Keyboard shortcut number (1-4) */
+  shortcutNumber?: number;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -59,6 +60,7 @@ export function ModeCard({
   selected,
   onSelect,
   testID,
+  shortcutNumber,
 }: ModeCardProps) {
   const [hovered, setHovered] = useState(false);
 
@@ -71,7 +73,7 @@ export function ModeCard({
       onPress={onSelect}
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
-      style={({ pressed, focused }) => [
+      style={({ pressed, focused }: any) => [
         styles.card,
         hovered && !selected && styles.cardHover,
         selected && styles.cardSelected,
@@ -79,9 +81,9 @@ export function ModeCard({
         focused && styles.cardFocused,
       ]}
       accessibilityRole="button"
-      accessibilityLabel={`${title}: ${description}`}
+      accessibilityLabel={`Option ${shortcutNumber ?? ''}: ${title}, ${description}`}
       accessibilityState={{ selected }}
-      accessibilityHint={`Tap to communicate using ${title}`}
+      accessibilityHint={`Press key ${shortcutNumber ?? ''} or tap to select ${title}`}
       testID={testID}
     >
       {/* Icon container */}
@@ -97,15 +99,22 @@ export function ModeCard({
 
       {/* Text content */}
       <View style={styles.textBlock}>
-        <Text
-          style={[
-            styles.title,
-            selected && styles.titleSelected,
-          ]}
-          numberOfLines={1}
-        >
-          {title}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text
+            style={[
+              styles.title,
+              selected && styles.titleSelected,
+            ]}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+          {Boolean(shortcutNumber) && (
+            <View style={styles.shortcutBadge} aria-hidden>
+              <Text style={styles.shortcutText}>{shortcutNumber}</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.description} numberOfLines={2}>
           {description}
         </Text>
@@ -135,7 +144,7 @@ const styles = StyleSheet.create({
     padding: AccessSpacing.xl,
     gap: AccessSpacing.md,
     // Ensure keyboard focus is visible
-    outlineStyle: Platform.select({ web: 'none', default: undefined }),
+    outlineStyle: Platform.select({ web: 'none' as any, default: undefined }),
   },
 
   // ── States ─────────────────────────────────────────────────────────────
@@ -184,6 +193,25 @@ const styles = StyleSheet.create({
   textBlock: {
     gap: AccessSpacing.xs,
     flex: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: AccessSpacing.xs,
+  },
+  shortcutBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: AccessRadius.sm,
+    backgroundColor: AccessColors.background,
+    borderWidth: 1,
+    borderColor: AccessColors.borderLight,
+  },
+  shortcutText: {
+    fontSize: AccessFontSize.xs,
+    fontWeight: AccessFontWeight.bold,
+    color: AccessColors.navy,
   },
   title: {
     fontSize: AccessFontSize.lg,

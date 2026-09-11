@@ -1,10 +1,10 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { SessionProvider } from '@/context/SessionContext';
+import { AudioNavProvider } from '@/context/AudioNavContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -22,18 +22,20 @@ export default function RootLayout() {
 
   return (
     <SessionProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AnimatedSplashOverlay />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            // Subtle fade transition between mode pages
-            animation: 'fade',
-            animationDuration: 200,
-            contentStyle: { backgroundColor: '#F5F4F1' },
-          }}
-        />
-      </ThemeProvider>
+      <AudioNavProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <AnimatedSplashOverlay />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              // Subtle fade transition between mode pages
+              animation: 'fade',
+              animationDuration: 200,
+              contentStyle: { backgroundColor: '#F5F4F1' },
+            }}
+          />
+        </ThemeProvider>
+      </AudioNavProvider>
     </SessionProvider>
   );
 }

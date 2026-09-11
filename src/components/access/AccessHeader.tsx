@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 
 import { KioskIcon } from './KioskIcon';
+import { AudioNavControl } from './AudioNavControl';
 import {
   AccessColors,
   AccessSpacing,
@@ -32,7 +33,7 @@ export function AccessHeader() {
   return (
     <View
       style={styles.container}
-      accessibilityRole="banner"
+      role="banner"
       accessibilityLabel="ACCESS — Accessible Communication Service"
     >
       {/* ── LEFT: Wordmark ─────────────────────────────────────── */}
@@ -51,8 +52,10 @@ export function AccessHeader() {
         </Text>
       </View>
 
-      {/* ── RIGHT: Status + Settings ────────────────────────────── */}
+      {/* ── RIGHT: Audio Navigation + Status + Settings ────────── */}
       <View style={styles.right}>
+        <AudioNavControl />
+
         <View
           style={styles.statusPill}
           accessibilityLabel="Service status: available"

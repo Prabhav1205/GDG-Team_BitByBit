@@ -38,7 +38,7 @@ export function AssistanceBar() {
   }
 
   return (
-    <View style={styles.container} accessibilityRole="contentinfo">
+    <View style={styles.container} role="contentinfo">
       {/* ── Top divider ─────────────────────────────────────────── */}
       <View style={styles.divider} />
 
@@ -48,7 +48,7 @@ export function AssistanceBar() {
           <Text style={styles.assistanceLabel}>Need assistance?</Text>
           <Pressable
             onPress={handleRequestStaff}
-            style={({ pressed, focused }) => [
+            style={({ pressed, focused }: any) => [
               styles.staffBtn,
               staffRequested && styles.staffBtnActive,
               pressed && styles.staffBtnPressed,
@@ -60,7 +60,7 @@ export function AssistanceBar() {
                 ? 'Staff assistance requested. A member of staff will be with you shortly.'
                 : 'Request staff assistance'
             }
-            accessibilityState={{ pressed: staffRequested }}
+            accessibilityState={{ busy: staffRequested }}
             testID="request-staff"
           >
             <Text
@@ -81,7 +81,7 @@ export function AssistanceBar() {
           <View style={styles.languageRow}>
             <Text style={styles.languagePrefix}>Language:</Text>
             <Pressable
-              style={({ focused }) => [
+              style={({ focused }: any) => [
                 styles.languageBtn,
                 focused && styles.languageBtnFocused,
               ]}

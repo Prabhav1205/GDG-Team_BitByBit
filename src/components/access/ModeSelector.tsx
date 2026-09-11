@@ -9,14 +9,14 @@
  * do not become uncomfortably wide on large kiosk displays.
  */
 
-import React from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { router } from 'expo-router';
 
 import { ModeCard } from './ModeCard';
 import { useSession, type CommunicationMode } from '@/context/SessionContext';
+import { useAudioNav } from '@/context/AudioNavContext';
 import {
-  AccessColors,
   AccessSpacing,
 } from '@/constants/access-theme';
 
@@ -30,6 +30,7 @@ const MODES = [
     description: 'Communicate using sign language',
     route: '/sign' as const,
     testID: 'mode-sign',
+    shortcutNumber: 1,
   },
   {
     id: 'voice' as CommunicationMode,
@@ -38,6 +39,7 @@ const MODES = [
     description: 'Speak naturally using your voice',
     route: '/voice' as const,
     testID: 'mode-voice',
+    shortcutNumber: 2,
   },
   {
     id: 'text' as CommunicationMode,
@@ -46,6 +48,7 @@ const MODES = [
     description: 'Type what you need to communicate',
     route: '/text' as const,
     testID: 'mode-text',
+    shortcutNumber: 3,
   },
   {
     id: 'assisted-touch' as CommunicationMode,
@@ -54,6 +57,7 @@ const MODES = [
     description: 'Use simplified controls with larger touch targets',
     route: '/assisted-touch' as const,
     testID: 'mode-assisted-touch',
+    shortcutNumber: 4,
   },
 ] as const;
 
@@ -62,17 +66,37 @@ const MODES = [
 export function ModeSelector() {
   const { width } = useWindowDimensions();
   const { session, setMode } = useSession();
+  const { announce } = useAudioNav();
 
   const isNarrow = width < 700;
-  const gridStyle = isNarrow ? styles.gridSingle : styles.gridDouble;
 
-  function handleSelect(modeId: CommunicationMode, route: string) {
+  function handleSelect(modeId: CommunicationMode, route: string, title: string) {
     setMode(modeId);
+    announce(`Selected ${title}`);
     // Small deliberate pause so the selected state is visible before navigation
     setTimeout(() => {
       router.push(route as any);
     }, 160);
   }
+
+  // Keyboard shortcut listener (1-4)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['1', '2', '3', '4'].includes(e.key)) {
+        const index = parseInt(e.key, 10) - 1;
+        const targetMode = MODES[index];
+        if (targetMode) {
+          handleSelect(targetMode.id, targetMode.route, targetMode.title);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Chunk modes into rows of 2 for the 2-column layout
   const rows = isNarrow
@@ -85,8 +109,8 @@ export function ModeSelector() {
   return (
     <View
       style={styles.container}
-      accessibilityRole="group"
-      accessibilityLabel="Communication mode options"
+      role="group"
+      accessibilityLabel="Communication mode options. Press keys 1 through 4 to choose."
     >
       {rows.map((row, rowIndex) => (
         <View
@@ -100,7 +124,8 @@ export function ModeSelector() {
               title={mode.title}
               description={mode.description}
               selected={session.communicationMode === mode.id}
-              onSelect={() => handleSelect(mode.id, mode.route)}
+              onSelect={() => handleSelect(mode.id, mode.route, mode.title)}
+              shortcutNumber={mode.shortcutNumber}
               testID={mode.testID}
             />
           ))}

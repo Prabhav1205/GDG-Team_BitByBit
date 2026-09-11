@@ -50,7 +50,7 @@ export default function HomeScreen() {
           {/* Intro ─────────────────────────────────────────────────── */}
           <View
             style={styles.intro}
-            accessibilityRole="region"
+            role="region"
             accessibilityLabel="Communication mode selection"
           >
             <Text

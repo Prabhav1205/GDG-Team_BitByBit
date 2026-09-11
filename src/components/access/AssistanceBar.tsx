@@ -16,6 +16,7 @@ import {
   Pressable,
   StyleSheet,
 } from 'react-native';
+import { router } from 'expo-router';
 
 import {
   AccessColors,
@@ -43,7 +44,7 @@ export function AssistanceBar() {
       <View style={styles.divider} />
 
       <View style={styles.inner}>
-        {/* ── LEFT: Assistance ──────────────────────────────────── */}
+        {/* ── LEFT: Assistance & Eligibility ──────────────────────── */}
         <View style={styles.left}>
           <Text style={styles.assistanceLabel}>Need assistance?</Text>
           <Pressable
@@ -72,6 +73,22 @@ export function AssistanceBar() {
               {staffRequested
                 ? 'Staff notified — please wait'
                 : 'Request staff assistance'}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push('/eligibility' as any)}
+            style={({ pressed, focused }: any) => [
+              styles.eligibilityBtn,
+              pressed && styles.staffBtnPressed,
+              focused && styles.staffBtnFocused,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Check Eligibility and Benefit Schemes"
+            testID="eligibility-matcher-btn"
+          >
+            <Text style={styles.eligibilityBtnLabel}>
+              Check Benefit Schemes ↗
             </Text>
           </Pressable>
         </View>
@@ -164,6 +181,19 @@ const styles = StyleSheet.create({
   },
   staffBtnLabelActive: {
     color: AccessColors.statusGreen,
+  },
+  eligibilityBtn: {
+    paddingVertical: AccessSpacing.sm + 2,
+    paddingHorizontal: AccessSpacing.lg,
+    borderRadius: AccessRadius.sm,
+    borderWidth: 1.5,
+    borderColor: AccessColors.teal,
+    backgroundColor: AccessColors.cardSelected,
+  },
+  eligibilityBtnLabel: {
+    fontSize: AccessFontSize.sm,
+    fontWeight: AccessFontWeight.bold,
+    color: AccessColors.tealDark,
   },
 
   // ── Right ──────────────────────────────────────────────────────────────

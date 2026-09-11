@@ -1,0 +1,106 @@
+[
+  {
+    "id": "adip-scheme",
+    "title": "ADIP Assistance for Purchase/Fitting of Aids & Appliances",
+    "category": "Assistive Devices",
+    "provider": "Ministry of Social Justice and Empowerment (Govt of India)",
+    "benefitType": "Free Assistive Equipment",
+    "benefitSummary": "Provides free or subsidized durable assistive devices (hearing aids, wheelchairs, prosthetics, braille equipment) up to Rs. 15,000.",
+    "minAge": 0,
+    "maxAge": 120,
+    "eligibleDisabilities": ["visual", "hearing", "speech", "locomotor", "any"],
+    "maxAnnualIncome": 240000,
+    "eligibleStates": ["All"],
+    "requiredDocuments": [
+      "Disability Certificate (min 40%)",
+      "Income Certificate",
+      "Aadhaar Card",
+      "Passport Photograph"
+    ],
+    "applicationSteps": [
+      "Visit nearest ALIMCO or District Disability Center",
+      "Submit filled ADIP application form with documents",
+      "Undergo physical evaluation by medical expert",
+      "Receive free custom fitted assistive device"
+    ],
+    "officialLink": "https://disabilityaffairs.gov.in"
+  },
+  {
+    "id": "nhfdc-loan",
+    "title": "NHFDC Self-Employment & Skill Loan Scheme",
+    "category": "Financial Loan",
+    "provider": "National Handicapped Finance and Development Corporation",
+    "benefitType": "Concessional Interest Loan",
+    "benefitSummary": "Loans up to Rs. 25 Lakhs at low interest rate (4% to 8% p.a.) for setting up small business, education, or skill training.",
+    "minAge": 18,
+    "maxAge": 65,
+    "eligibleDisabilities": ["visual", "hearing", "speech", "locomotor", "any"],
+    "maxAnnualIncome": 500000,
+    "eligibleStates": ["All"],
+    "requiredDocuments": [
+      "Disability Certificate (min 40%)",
+      "Business Plan / Course Admission Proof",
+      "Income Certificate",
+      "Identity & Address Proof"
+    ],
+    "applicationSteps": [
+      "Apply online via NHFDC portal or State Channelizing Agency",
+      "Submit project cost estimate and business proposal",
+      "Verification by State Channelizing Agency",
+      "Loan disbursement directly to bank account"
+    ],
+    "officialLink": "http://www.nhfdc.nic.in"
+  },
+  {
+    "id": "pension-igndps",
+    "title": "Indira Gandhi National Disability Pension Scheme (IGNDPS)",
+    "category": "Monthly Pension",
+    "provider": "Department of Rural Development",
+    "benefitType": "Monthly Financial Allowance",
+    "benefitSummary": "Monthly pension allowance paid directly to severe disability holders living below poverty line.",
+    "minAge": 18,
+    "maxAge": 79,
+    "eligibleDisabilities": ["visual", "hearing", "speech", "locomotor", "any"],
+    "maxAnnualIncome": 300000,
+    "eligibleStates": ["All"],
+    "requiredDocuments": [
+      "Disability Certificate (min 80% severe rating)",
+      "BPL Ration Card / Income Certificate",
+      "Aadhaar Card",
+      "Bank Account Passbook"
+    ],
+    "applicationSteps": [
+      "Obtain application form from Gram Panchayat / Municipal Office",
+      "Attach medical board certificate and BPL proof",
+      "Verification by Block Development Officer (BDO)",
+      "Monthly pension credited directly to bank account"
+    ],
+    "officialLink": "https://nsap.nic.in"
+  },
+  {
+    "id": "pre-matric-scholarship",
+    "title": "Scholarship for Students with Disabilities (Pre & Post Matric)",
+    "category": "Education",
+    "provider": "Department of Empowerment of Persons with Disabilities",
+    "benefitType": "Educational Grant",
+    "benefitSummary": "Annual maintenance allowance, book grant, and disability allowance up to Rs. 4,000/month for students in classes 9 to Higher Education.",
+    "minAge": 8,
+    "maxAge": 30,
+    "eligibleDisabilities": ["visual", "hearing", "speech", "locomotor", "any"],
+    "maxAnnualIncome": 250000,
+    "eligibleStates": ["All"],
+    "requiredDocuments": [
+      "Disability Certificate (min 40%)",
+      "Parental Income Certificate",
+      "School/College Marksheet",
+      "Student Bank Account Details"
+    ],
+    "applicationSteps": [
+      "Register on National Scholarship Portal (NSP)",
+      "Select Disability Scholarship Scheme and upload documents",
+      "Verification by Institution Head",
+      "Scholarship disbursed via Direct Benefit Transfer (DBT)"
+    ],
+    "officialLink": "https://scholarships.gov.in"
+  }
+]

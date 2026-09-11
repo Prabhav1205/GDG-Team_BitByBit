@@ -1,0 +1,39 @@
+{
+  "model_version": "1.0.0",
+  "training_timestamp_utc": "2026-09-11T17:13:37.900896+00:00",
+  "classifier_type": "RandomForestClassifier",
+  "feature_count": 63,
+  "n_estimators": 200,
+  "classes": [
+    "NO",
+    "WHERE",
+    "YES"
+  ],
+  "class_counts": {
+    "NO": 150,
+    "WHERE": 150,
+    "YES": 150
+  },
+  "total_samples": 450,
+  "train_samples": 360,
+  "test_samples": 90,
+  "test_accuracy": 0.9778,
+  "confusion_matrix": [
+    [
+      28,
+      0,
+      2
+    ],
+    [
+      0,
+      30,
+      0
+    ],
+    [
+      0,
+      0,
+      30
+    ]
+  ],
+  "underperforming_classes": []
+}

@@ -1,0 +1,36 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment variables
+.env
+.env.*
+
+# Temporary / Scratch files
+scratch/
+*.tmp
+*.log
+
+# Keep dataset and models tracked with gitkeeps, but ignore large dynamic files if needed
+# dataset/*.csv
+# models/*.pkl

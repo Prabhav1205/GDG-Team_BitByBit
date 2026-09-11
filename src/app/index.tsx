@@ -80,7 +80,7 @@ export default function HomeScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Hero section */}
-          <View style={styles.hero} role="region" accessibilityLabel="Welcome">
+          <View style={styles.hero} accessibilityLabel="Welcome">
             <View style={styles.heroBadge}>
               <View style={styles.heroBadgeDot} />
               <Text style={styles.heroBadgeText}>Accessibility Assistant</Text>
@@ -100,7 +100,6 @@ export default function HomeScreen() {
           {/* â”€â”€ Institution cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <View
             style={styles.section}
-            accessibilityRole="none"
             accessibilityLabel="Institution selection"
           >
             <Text style={styles.sectionLabel}>Where are you today?</Text>
@@ -151,10 +150,9 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* â”€â”€ Mode selector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* ── Mode selector ────────────────────────────────────────── */}
           <View
             style={styles.section}
-            accessibilityRole="none"
             accessibilityLabel="Communication mode selection"
           >
             <Text style={styles.sectionLabel}>Choose how you would like to communicate.</Text>
@@ -209,6 +207,12 @@ const styles = StyleSheet.create({
   },
 
   // â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  intro: {
+    maxWidth: 720,
+    alignSelf: 'center',
+    width: '100%',
+    gap: AccessSpacing.md,
+  },
   hero: {
     gap: AccessSpacing.md,
   },

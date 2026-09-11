@@ -1,9 +1,9 @@
 /**
- * AccessHeader — institutional kiosk header.
+ * AccessHeader â€” institutional kiosk header.
  *
  * Structure:
- *   LEFT  — ACCESS wordmark + "Accessible Communication Service" descriptor
- *   RIGHT — Service status indicator + settings button
+ *   LEFT  â€” ACCESS wordmark + "Accessible Communication Service" descriptor
+ *   RIGHT â€” Service status indicator + settings button
  *
  * Visual language: deep navy background, restrained typography,
  * no decorative elements.
@@ -17,6 +17,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import { router } from 'expo-router';
 
 import { KioskIcon } from './KioskIcon';
 import {
@@ -26,16 +27,16 @@ import {
   AccessFontWeight,
 } from '@/constants/access-theme';
 
-// ── Component ─────────────────────────────────────────────────────────────
+// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function AccessHeader() {
   return (
     <View
       style={styles.container}
-      accessibilityRole="banner"
-      accessibilityLabel="ACCESS — Accessible Communication Service"
+      accessibilityRole="none"
+      accessibilityLabel="ACCESS â€” Accessible Communication Service"
     >
-      {/* ── LEFT: Wordmark ─────────────────────────────────────── */}
+      {/* â”€â”€ LEFT: Wordmark â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <View style={styles.left}>
         <Text
           style={styles.wordmark}
@@ -51,7 +52,7 @@ export function AccessHeader() {
         </Text>
       </View>
 
-      {/* ── RIGHT: Status + Settings ────────────────────────────── */}
+      {/* â”€â”€ RIGHT: Status + Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <View style={styles.right}>
         <View
           style={styles.statusPill}
@@ -63,7 +64,8 @@ export function AccessHeader() {
         </View>
 
         <Pressable
-          style={({ pressed }) => [
+          onPress={() => router.push('/settings' as any)}
+          style={({ pressed }: any) => [
             styles.settingsBtn,
             pressed && styles.settingsBtnPressed,
           ]}
@@ -79,13 +81,13 @@ export function AccessHeader() {
         </Pressable>
       </View>
 
-      {/* ── Bottom divider ──────────────────────────────────────── */}
+      {/* â”€â”€ Bottom divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <View style={styles.divider} />
     </View>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────
+// â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const styles = StyleSheet.create({
   container: {
@@ -98,7 +100,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
 
-  // ── Left ───────────────────────────────────────────────────────────────
+  // â”€â”€ Left â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   left: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -123,7 +125,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  // ── Right ──────────────────────────────────────────────────────────────
+  // â”€â”€ Right â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   right: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -156,7 +158,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.10)',
   },
 
-  // ── Bottom divider ──────────────────────────────────────────────────────
+  // â”€â”€ Bottom divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   divider: {
     position: 'absolute',
     bottom: 0,
@@ -166,3 +168,5 @@ const styles = StyleSheet.create({
     backgroundColor: AccessColors.headerBorder,
   },
 });
+
+

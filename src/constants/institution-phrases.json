@@ -1,0 +1,109 @@
+{
+  "institutions": [
+    {
+      "id": "general",
+      "name": "General Kiosk",
+      "icon": "info",
+      "description": "Common kiosk inquiries and general assistance phrases",
+      "categories": [
+        {
+          "name": "Common Questions",
+          "phrases": [
+            "Where is the main service counter?",
+            "I need assistance filling out this form.",
+            "What documents are required?",
+            "How long is the current waiting time?",
+            "Where can I find the restrooms?"
+          ]
+        },
+        {
+          "name": "Quick Responses",
+          "phrases": [
+            "Yes, thank you.",
+            "No, I need more help.",
+            "Please repeat that.",
+            "I have an appointment."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bank",
+      "name": "Bank & Financial",
+      "icon": "card",
+      "description": "Phrases for banking, accounts, deposits, and cash services",
+      "categories": [
+        {
+          "name": "Accounts & Deposit",
+          "phrases": [
+            "I would like to open a new account.",
+            "I want to deposit cash into my account.",
+            "I need to withdraw money.",
+            "Can I update my phone number and address?",
+            "I need a printout of my account statement."
+          ]
+        },
+        {
+          "name": "Cards & Loans",
+          "phrases": [
+            "My debit card is blocked.",
+            "I want to apply for a new credit card.",
+            "I have a query regarding a home loan.",
+            "Where is the ATM machine located?"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hospital",
+      "name": "Hospital & Clinic",
+      "icon": "health",
+      "description": "Phrases for medical registration, appointments, and emergency",
+      "categories": [
+        {
+          "name": "Registration & OPD",
+          "phrases": [
+            "I have a prior doctor appointment.",
+            "Where is the registration OPD counter?",
+            "I need to collect my laboratory test report.",
+            "Where is the pharmacy counter?"
+          ]
+        },
+        {
+          "name": "Medical Assistance",
+          "phrases": [
+            "I need emergency medical assistance.",
+            "Where is the radiology / X-Ray department?",
+            "Can someone guide me to the wheelchair ramp?",
+            "I am feeling unwell, please help."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "govt",
+      "name": "Govt & Municipal",
+      "icon": "doc",
+      "description": "Phrases for government certificates, forms, and public services",
+      "categories": [
+        {
+          "name": "Applications & Certificates",
+          "phrases": [
+            "I am here to apply for an official certificate.",
+            "Where do I submit my completed application form?",
+            "I need to pay municipal service fees.",
+            "Where do I get my token number for verification?"
+          ]
+        },
+        {
+          "name": "Status & Verification",
+          "phrases": [
+            "I want to check my application status.",
+            "Which counter handles document verification?",
+            "Is there a helpdesk for senior citizens?"
+          ]
+        }
+      ]
+    }
+  ]
+}

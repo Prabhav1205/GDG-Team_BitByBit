@@ -21,7 +21,34 @@ export type IconName =
   | 'touch'
   | 'settings'
   | 'back'
-  | 'status';
+  | 'status'
+  | 'mic'
+  | 'camera'
+  | 'chat'
+  | 'star'
+  | 'person'
+  | 'check'
+  | 'send'
+  | 'close'
+  | 'filter'
+  | 'contrast'
+  | 'bank'
+  | 'hospital'
+  | 'government'
+  | 'help'
+  | 'info'
+  | 'next'
+  | 'repeat'
+  | 'done'
+  | 'language'
+  | 'time'
+  | 'warning'
+  | 'dashboard'
+  | 'history'
+  | 'session'
+  | 'benefits'
+  | 'respond'
+  | 'resolve';
 
 const ICON_MAP: Record<
   IconName,
@@ -61,6 +88,141 @@ const ICON_MAP: Record<
     ios: 'circle.fill',
     android: 'circle',
     web: 'circle',
+  },
+  mic: {
+    ios: 'mic.fill',
+    android: 'mic',
+    web: 'mic',
+  },
+  camera: {
+    ios: 'camera',
+    android: 'videocam',
+    web: 'videocam',
+  },
+  chat: {
+    ios: 'bubble.left.and.bubble.right',
+    android: 'chat',
+    web: 'chat',
+  },
+  star: {
+    ios: 'star',
+    android: 'star',
+    web: 'star',
+  },
+  person: {
+    ios: 'person',
+    android: 'person',
+    web: 'person',
+  },
+  check: {
+    ios: 'checkmark',
+    android: 'check',
+    web: 'check',
+  },
+  send: {
+    ios: 'paperplane',
+    android: 'send',
+    web: 'send',
+  },
+  close: {
+    ios: 'xmark',
+    android: 'close',
+    web: 'close',
+  },
+  filter: {
+    ios: 'line.3.horizontal.decrease',
+    android: 'filter_list',
+    web: 'filter_list',
+  },
+  contrast: {
+    ios: 'circle.lefthalf.filled',
+    android: 'contrast',
+    web: 'contrast',
+  },
+  bank: {
+    ios: 'building.columns',
+    android: 'account_balance',
+    web: 'account_balance',
+  },
+  hospital: {
+    ios: 'cross.case',
+    android: 'local_hospital',
+    web: 'local_hospital',
+  },
+  government: {
+    ios: 'flag',
+    android: 'account_balance',
+    web: 'account_balance',
+  },
+  help: {
+    ios: 'questionmark.circle',
+    android: 'help',
+    web: 'help',
+  },
+  info: {
+    ios: 'info.circle',
+    android: 'info',
+    web: 'info',
+  },
+  next: {
+    ios: 'arrow.right',
+    android: 'arrow_forward',
+    web: 'arrow_forward',
+  },
+  repeat: {
+    ios: 'repeat',
+    android: 'repeat',
+    web: 'repeat',
+  },
+  done: {
+    ios: 'checkmark.circle',
+    android: 'check_circle',
+    web: 'check_circle',
+  },
+  language: {
+    ios: 'globe',
+    android: 'language',
+    web: 'language',
+  },
+  time: {
+    ios: 'clock',
+    android: 'schedule',
+    web: 'schedule',
+  },
+  warning: {
+    ios: 'exclamationmark.triangle',
+    android: 'warning',
+    web: 'warning',
+  },
+  dashboard: {
+    ios: 'square.grid.2x2',
+    android: 'dashboard',
+    web: 'dashboard',
+  },
+  history: {
+    ios: 'clock.arrow.circlepath',
+    android: 'history',
+    web: 'history',
+  },
+  session: {
+    ios: 'person.crop.rectangle',
+    android: 'badge',
+    web: 'badge',
+  },
+  benefits: {
+    ios: 'star.circle',
+    android: 'verified',
+    web: 'verified',
+  },
+  respond: {
+    ios: 'arrowshape.turn.up.left',
+    android: 'reply',
+    web: 'reply',
+  },
+  resolve: {
+    ios: 'checkmark.seal',
+    android: 'task_alt',
+    web: 'task_alt',
   },
 };
 

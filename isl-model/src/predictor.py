@@ -26,7 +26,7 @@ class GesturePredictor:
         self,
         model_path: Union[str, Path],
         gestures_config_path: Union[str, Path],
-        confidence_threshold: float = 0.75,
+        confidence_threshold: float = 0.35,
         metadata_path: Optional[Union[str, Path]] = None,
     ) -> None:
         """Initializes the predictor with model weights and configuration.
@@ -83,6 +83,12 @@ class GesturePredictor:
             self.model = joblib.load(self.model_path)
         except Exception as e:
             raise RuntimeError(f"Failed to deserialize model at {self.model_path}: {e}")
+
+        # The saved forest was trained with parallel workers. Keeping inference
+        # single-threaded avoids joblib spawning a Windows multiprocessing pool
+        # for each kiosk request (which can fail under restricted hosts).
+        if hasattr(self.model, "n_jobs"):
+            self.model.n_jobs = 1
 
         # Load metadata if present
         meta_file = self.metadata_path or self.model_path.parent / "model_metadata.json"

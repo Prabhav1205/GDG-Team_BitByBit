@@ -63,6 +63,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from fastapi.staticfiles import StaticFiles
+
 # Enable CORS for React frontend (localhost:3000, 5173, etc.)
 app.add_middleware(
     CORSMiddleware,
@@ -71,6 +73,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+STATIC_DIR = PROJECT_ROOT / "static"
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 
 
 # ---------------------------------------------------------

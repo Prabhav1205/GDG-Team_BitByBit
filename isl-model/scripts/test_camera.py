@@ -54,7 +54,7 @@ def main() -> None:
     # Initialize tracker
     tracker = HandTracker(
         static_image_mode=False,
-        max_num_hands=1,
+        max_num_hands=2,
         min_detection_confidence=0.6,
         min_tracking_confidence=0.5,
     )
@@ -83,13 +83,15 @@ def main() -> None:
             # 1. Flip horizontally for natural mirror interaction
             frame = cv2.flip(frame, 1)
 
-            # 2. Detect hand landmarks
+            # 2. Detect hand landmarks (supports both hands)
             detected, landmarks, raw_results = tracker.process_frame(frame)
 
             # 3. Draw landmarks
             if detected:
                 tracker.draw_landmarks(frame, raw_results)
-                status_text = "Status: Hand Detected (21 landmarks)"
+                cnt = tracker.hand_count
+                hands_str = ", ".join(tracker.get_handedness()) or f"{cnt} Hands"
+                status_text = f"Status: {cnt} Hand{'s' if cnt > 1 else ''} Detected ({hands_str})"
                 status_color = (0, 255, 0)  # Green
             else:
                 status_text = "Status: No Hand Detected"

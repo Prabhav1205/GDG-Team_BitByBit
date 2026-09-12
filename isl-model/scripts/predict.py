@@ -48,7 +48,7 @@ def main() -> None:
         confidence_threshold=0.75,
     )
     smoother = TemporalSmoother(window_size=7, majority_ratio=0.65)
-    tracker = HandTracker(max_num_hands=1)
+    tracker = HandTracker(max_num_hands=2)
 
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -78,23 +78,42 @@ def main() -> None:
             frame = cv2.flip(frame, 1)
             h, w, _ = frame.shape
 
-            # 2. Hand tracking
+            # 2. Hand tracking (supports both hands)
             detected, landmarks, raw_results = tracker.process_frame(frame)
 
             display_gesture = "NONE"
             display_conf = 0.0
-            display_phrase = "Place hand in frame"
-            status_text = "Searching for hand..."
+            display_phrase = "Place hand(s) in frame"
+            status_text = "Searching for hand(s)..."
             card_color = (40, 40, 40)
             text_color = (180, 180, 180)
 
             if detected:
                 tracker.draw_landmarks(frame, raw_results)
 
-                # 3. Model Inference
-                pred_result = predictor.predict(landmarks)
-                frame_gesture = pred_result["gesture"]
-                frame_confidence = pred_result["confidence"]
+                # 3. Model Inference across all detected hands
+                all_hands = tracker.get_all_landmarks()
+                handedness = tracker.get_handedness()
+
+                best_pred = None
+                best_conf = -1.0
+                active_idx = 0
+
+                for idx, hand_lms in enumerate(all_hands):
+                    pred = predictor.predict(hand_lms)
+                    if pred["confidence"] > best_conf:
+                        best_conf = pred["confidence"]
+                        best_pred = pred
+                        active_idx = idx
+
+                frame_gesture = best_pred["gesture"]
+                frame_confidence = best_pred["confidence"]
+                active_label = (
+                    handedness[active_idx]
+                    if active_idx < len(handedness)
+                    else f"Hand {active_idx + 1}"
+                )
+                hand_tag = f"[{len(all_hands)} Hand{'s' if len(all_hands) > 1 else ''} | {active_label}]"
 
                 # 4. Temporal Smoothing
                 smoothed_gesture, smoothed_conf, is_confirmed = smoother.add_prediction(
@@ -106,17 +125,17 @@ def main() -> None:
 
                 if is_confirmed:
                     display_phrase = predictor.get_phrase_for_gesture(smoothed_gesture)
-                    status_text = "GESTURE CONFIRMED [Ready for Kiosk Action]"
+                    status_text = f"GESTURE CONFIRMED {hand_tag}"
                     card_color = (25, 120, 25)    # Rich Green
                     text_color = (255, 255, 255)
                 elif smoothed_gesture != "UNKNOWN":
                     display_phrase = predictor.get_phrase_for_gesture(smoothed_gesture)
-                    status_text = "Stabilizing gesture..."
+                    status_text = f"Stabilizing gesture... {hand_tag}"
                     card_color = (30, 80, 150)    # Amber/Blue
                     text_color = (230, 230, 230)
                 else:
                     display_phrase = "Unrecognized gesture or transition"
-                    status_text = "UNKNOWN [Try adjusting hand position]"
+                    status_text = f"UNKNOWN {hand_tag} - Adjust position"
                     card_color = (40, 40, 120)    # Crimson/Dark Red
                     text_color = (200, 200, 200)
             else:

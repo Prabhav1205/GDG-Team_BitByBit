@@ -96,14 +96,16 @@ def collect_for_gesture(
 
             if detected:
                 tracker.draw_landmarks(frame, raw_results)
+                hand_cnt = tracker.hand_count
+                hand_tag = f"[{hand_cnt} Hand{'s' if hand_cnt > 1 else ''}]"
                 if not is_paused:
                     saved = collector.record_sample(gesture_id, landmarks)
                     if saved:
                         collected += 1
-                    status_text = f"RECORDING ({collected}/{target_samples})"
+                    status_text = f"RECORDING ({collected}/{target_samples}) {hand_tag}"
                     status_color = (0, 255, 0)
                 else:
-                    status_text = "PAUSED (Press SPACE to resume)"
+                    status_text = f"PAUSED (Press SPACE to resume) {hand_tag}"
                     status_color = (0, 255, 255)
 
             # Draw HUD Overlay
@@ -172,7 +174,7 @@ def main() -> None:
 
     gestures = load_gesture_config()
     collector = DataCollector(output_csv_path=DATASET_CSV)
-    tracker = HandTracker(max_num_hands=1)
+    tracker = HandTracker(max_num_hands=2)
 
     try:
         while True:

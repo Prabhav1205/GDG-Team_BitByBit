@@ -1,12 +1,17 @@
-﻿/**
- * PageHeader â€” reusable sub-page header with back navigation.
+/**
+ * PageHeader — reusable sub-page header with back navigation.
  *
  * Used by all inner pages (sign, voice, text, easy-tap, conversation,
  * benefits, settings) to provide consistent back navigation.
+ *
+ * Visual enhancements:
+ *   — Filled navy back button with white text + icon
+ *   — Centered bold title with teal underline accent
+ *   — Subtle gradient background strip
  */
 
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import {
   AccessColors,
@@ -14,10 +19,11 @@ import {
   AccessRadius,
   AccessFontSize,
   AccessFontWeight,
+  AccessShadow,
 } from '@/constants/access-theme';
 import { KioskIcon } from './KioskIcon';
 
-// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Types ─────────────────────────────────────────────────────────────────
 
 interface PageHeaderProps {
   title: string;
@@ -29,7 +35,7 @@ interface PageHeaderProps {
   rightAction?: React.ReactNode;
 }
 
-// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Component ─────────────────────────────────────────────────────────────
 
 export function PageHeader({
   title,
@@ -37,34 +43,46 @@ export function PageHeader({
   backLabel = 'Back',
   rightAction,
 }: PageHeaderProps) {
+  const { width } = useWindowDimensions();
+  const isNarrow = width < 600;
+  const [backHovered, setBackHovered] = useState(false);
+
   function handleBack() {
     router.push(backRoute as any);
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isNarrow && styles.containerNarrow]}>
+      {/* Back button — filled navy */}
       <Pressable
         onPress={handleBack}
+        onHoverIn={() => setBackHovered(true)}
+        onHoverOut={() => setBackHovered(false)}
         style={({ pressed }: any) => [
           styles.backBtn,
+          backHovered && styles.backBtnHovered,
           pressed && styles.backBtnPressed,
         ]}
         accessibilityRole="button"
         accessibilityLabel={backLabel}
         testID="page-header-back"
       >
-        <KioskIcon name="back" size={16} color={AccessColors.navy} />
-        <Text style={styles.backLabel}>{backLabel}</Text>
+        <KioskIcon name="back" size={15} color="#FFFFFF" />
+        {!isNarrow && <Text style={styles.backLabel}>{backLabel}</Text>}
       </Pressable>
 
-      <Text
-        style={styles.title}
-        accessibilityRole="header"
-        aria-level={1}
-        numberOfLines={1}
-      >
-        {title}
-      </Text>
+      {/* Title with underline accent */}
+      <View style={styles.titleWrapper}>
+        <Text
+          style={styles.title}
+          accessibilityRole="header"
+          aria-level={1}
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+        <View style={styles.titleAccent} />
+      </View>
 
       <View style={styles.right}>
         {rightAction ?? <View style={styles.spacer} />}
@@ -73,7 +91,7 @@ export function PageHeader({
   );
 }
 
-// â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Styles ─────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -83,9 +101,14 @@ const styles = StyleSheet.create({
     paddingVertical: AccessSpacing.md,
     borderBottomWidth: 1,
     borderBottomColor: AccessColors.divider,
-    backgroundColor: AccessColors.background,
+    backgroundColor: AccessColors.cardDefault,
     gap: AccessSpacing.md,
-    minHeight: 60,
+    minHeight: 64,
+  },
+  containerNarrow: {
+    paddingHorizontal: AccessSpacing.md,
+    minHeight: 52,
+    gap: AccessSpacing.sm,
   },
   backBtn: {
     flexDirection: 'row',
@@ -94,37 +117,38 @@ const styles = StyleSheet.create({
     paddingVertical: AccessSpacing.sm,
     paddingHorizontal: AccessSpacing.md,
     borderRadius: AccessRadius.sm,
-    borderWidth: 1,
-    borderColor: AccessColors.border,
-    backgroundColor: AccessColors.cardDefault,
+    backgroundColor: AccessColors.navy,
+    ...AccessShadow.sm,
     ...Platform.select({ web: { outlineStyle: 'none' }, default: {} }),
   },
-  backBtnPressed: {
-    opacity: 0.75,
-    backgroundColor: AccessColors.cardHover,
+  backBtnHovered: {
+    backgroundColor: AccessColors.navyHover,
+    ...AccessShadow.md,
   },
-  backBtnFocused: {
-    ...Platform.select({
-      web: {
-        outlineWidth: 3,
-        outlineColor: AccessColors.focusRing,
-        outlineStyle: 'solid',
-        outlineOffset: 2,
-      },
-      default: {},
-    }),
-  } as any,
+  backBtnPressed: {
+    opacity: 0.82,
+  },
   backLabel: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.medium,
-    color: AccessColors.navy,
+    fontWeight: AccessFontWeight.semibold,
+    color: '#FFFFFF',
+  },
+  titleWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
   },
   title: {
-    flex: 1,
     fontSize: AccessFontSize.lg,
-    fontWeight: AccessFontWeight.semibold,
+    fontWeight: AccessFontWeight.bold,
     color: AccessColors.textPrimary,
     textAlign: 'center',
+  },
+  titleAccent: {
+    width: 32,
+    height: 2.5,
+    borderRadius: 99,
+    backgroundColor: AccessColors.teal,
   },
   right: {
     minWidth: 80,
@@ -134,6 +158,3 @@ const styles = StyleSheet.create({
     width: 80,
   },
 });
-
-
-

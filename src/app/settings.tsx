@@ -1,11 +1,17 @@
-﻿/**
- * /settings â€” Application settings page.
+/**
+ * /settings — Application settings page.
  *
  * UI-only toggles for accessibility, institution, and language preferences.
  * Teammates can wire these up to persist in AsyncStorage/context.
+ *
+ * Visual enhancements:
+ *   — Sectioned cards with subtle shadows
+ *   — Animated institution chip selection
+ *   — Language rows with native labels and vivid radio buttons
+ *   — Vibrant teal switch track
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,8 +20,10 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { AccessHeader } from '@/components/access/AccessHeader';
 import { PageHeader } from '@/components/access/PageHeader';
@@ -26,9 +34,10 @@ import {
   AccessRadius,
   AccessFontSize,
   AccessFontWeight,
+  AccessShadow,
 } from '@/constants/access-theme';
 
-// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Types ───────────────────────────────────────────────────────────────────
 
 type AccessibilityKey =
   | 'highContrast'
@@ -37,28 +46,28 @@ type AccessibilityKey =
   | 'screenReaderFriendly'
   | 'largeTouchTargets';
 
-const ACCESSIBILITY_SETTINGS: { key: AccessibilityKey; label: string; description: string }[] = [
-  { key: 'highContrast',          label: 'High Contrast',           description: 'Maximum contrast for low vision users' },
-  { key: 'largeText',             label: 'Large Text',              description: 'Increases all text sizes across the app' },
-  { key: 'reducedMotion',         label: 'Reduced Motion',          description: 'Disables non-essential animations' },
-  { key: 'screenReaderFriendly',  label: 'Screen Reader Friendly',  description: 'Optimises layout for screen reader use' },
-  { key: 'largeTouchTargets',     label: 'Large Touch Targets',     description: 'Increases minimum tap target size' },
+const ACCESSIBILITY_SETTINGS: { key: AccessibilityKey; label: string; description: string; emoji: string }[] = [
+  { key: 'highContrast',          emoji: '🔳', label: 'High Contrast',           description: 'Maximum contrast for low vision users' },
+  { key: 'largeText',             emoji: '🔤', label: 'Large Text',              description: 'Increases all text sizes across the app' },
+  { key: 'reducedMotion',         emoji: '⏸️', label: 'Reduced Motion',          description: 'Disables non-essential animations' },
+  { key: 'screenReaderFriendly',  emoji: '👁️', label: 'Screen Reader Friendly',  description: 'Optimises layout for screen reader use' },
+  { key: 'largeTouchTargets',     emoji: '👆', label: 'Large Touch Targets',     description: 'Increases minimum tap target size' },
 ];
 
-const LANGUAGES: { code: string; label: string; nativeLabel: string }[] = [
-  { code: 'en', label: 'English',  nativeLabel: 'English'  },
-  { code: 'hi', label: 'Hindi',    nativeLabel: 'à¤¹à¤¿à¤‚à¤¦à¥€'    },
-  { code: 'mr', label: 'Marathi',  nativeLabel: 'à¤®à¤°à¤¾à¤ à¥€'    },
-  { code: 'kok', label: 'Konkani', nativeLabel: 'à¤•à¥‹à¤‚à¤•à¤£à¥€'   },
+const LANGUAGES: { code: string; label: string; nativeLabel: string; flag: string }[] = [
+  { code: 'en',  label: 'English',  nativeLabel: 'English',  flag: '🇬🇧' },
+  { code: 'hi',  label: 'Hindi',    nativeLabel: 'हिंदी',    flag: '🇮🇳' },
+  { code: 'mr',  label: 'Marathi',  nativeLabel: 'मराठी',    flag: '🇮🇳' },
+  { code: 'kok', label: 'Konkani',  nativeLabel: 'कोंकणी',   flag: '🇮🇳' },
 ];
 
-const INSTITUTIONS: { id: InstitutionType; label: string }[] = [
-  { id: 'bank',       label: 'Bank'            },
-  { id: 'hospital',   label: 'Hospital'        },
-  { id: 'government', label: 'Government Office' },
+const INSTITUTIONS: { id: InstitutionType; label: string; emoji: string; accent: string }[] = [
+  { id: 'bank',       label: 'Bank',             emoji: '🏦', accent: AccessColors.bankAccent },
+  { id: 'hospital',   label: 'Hospital',         emoji: '🏥', accent: AccessColors.hospitalAccent },
+  { id: 'government', label: 'Gov. Office',      emoji: '🏛️', accent: AccessColors.governmentAccent },
 ];
 
-// â”€â”€ Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Screen ──────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
   const { session, setInstitution, setLanguage } = useSession();
@@ -86,19 +95,22 @@ export default function SettingsPage() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* â”€â”€ Accessibility â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-          <SettingsSection title="Accessibility">
-            {ACCESSIBILITY_SETTINGS.map((s) => (
-              <SettingRow key={s.key}>
+          {/* ── Accessibility ─────────────────────────────────────────── */}
+          <SettingsSection title="Accessibility" icon="🛡️">
+            {ACCESSIBILITY_SETTINGS.map((s, i) => (
+              <SettingRow key={s.key} isLast={i === ACCESSIBILITY_SETTINGS.length - 1}>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>{s.label}</Text>
-                  <Text style={styles.settingDesc}>{s.description}</Text>
+                  <Text style={styles.settingEmoji}>{s.emoji}</Text>
+                  <View style={styles.settingText}>
+                    <Text style={styles.settingLabel}>{s.label}</Text>
+                    <Text style={styles.settingDesc}>{s.description}</Text>
+                  </View>
                 </View>
                 <Switch
                   value={a11y[s.key]}
                   onValueChange={() => toggleA11y(s.key)}
-                  thumbColor={a11y[s.key] ? AccessColors.teal : AccessColors.textTertiary}
-                  trackColor={{ false: AccessColors.border, true: AccessColors.tealBorder + '50' }}
+                  thumbColor={a11y[s.key] ? '#FFFFFF' : AccessColors.textTertiary}
+                  trackColor={{ false: AccessColors.border, true: AccessColors.teal }}
                   accessibilityLabel={s.label}
                   accessibilityRole="switch"
                 />
@@ -106,59 +118,48 @@ export default function SettingsPage() {
             ))}
           </SettingsSection>
 
-          {/* â”€â”€ Institution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-          <SettingsSection title="Institution">
-            <View style={styles.optionRow}>
+          {/* ── Institution ───────────────────────────────────────────── */}
+          <SettingsSection title="Institution" icon="🏢">
+            <View style={styles.chipRow}>
               {INSTITUTIONS.map((inst) => {
                 const selected = session.institution === inst.id;
                 return (
-                  <Pressable
+                  <InstitutionChip
                     key={inst.id}
-                    style={({ pressed }: any) => [
-                      styles.optionChip,
-                      selected && styles.optionChipSelected,
-                      pressed && styles.optionChipPressed,
-                    ]}
+                    inst={inst}
+                    selected={selected}
                     onPress={() => setInstitution(inst.id)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    accessibilityLabel={`Select institution: ${inst.label}`}
-                  >
-                    <Text
-                      style={[
-                        styles.optionChipLabel,
-                        selected && styles.optionChipLabelSelected,
-                      ]}
-                    >
-                      {inst.label}
-                    </Text>
-                  </Pressable>
+                  />
                 );
               })}
             </View>
           </SettingsSection>
 
-          {/* â”€â”€ Language â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-          <SettingsSection title="Language">
-            {LANGUAGES.map((lang) => {
+          {/* ── Language ──────────────────────────────────────────────── */}
+          <SettingsSection title="Language" icon="🌐">
+            {LANGUAGES.map((lang, i) => {
               const selected = session.language === lang.code;
               return (
                 <Pressable
                   key={lang.code}
                   style={({ pressed }: any) => [
                     styles.langRow,
+                    i === LANGUAGES.length - 1 && styles.langRowLast,
                     selected && styles.langRowSelected,
                     pressed && styles.langRowPressed,
+                    ...Platform.select({ web: [{ outlineStyle: 'none' }], default: [] }),
                   ]}
                   onPress={() => setLanguage(lang.code)}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: selected }}
                   accessibilityLabel={`Language: ${lang.label}`}
                 >
+                  <Text style={styles.langFlag}>{lang.flag}</Text>
                   <View style={styles.langInfo}>
                     <Text style={styles.langLabel}>{lang.label}</Text>
                     <Text style={styles.langNative}>{lang.nativeLabel}</Text>
                   </View>
+                  {/* Radio button */}
                   <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
                     {selected && <View style={styles.radioInner} />}
                   </View>
@@ -167,35 +168,110 @@ export default function SettingsPage() {
             })}
           </SettingsSection>
 
-          {/* â”€â”€ Info notice â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-          <View style={styles.infoNotice}>
+          {/* ── Info notice ───────────────────────────────────────────── */}
+          <LinearGradient
+            colors={[AccessColors.tealFaint, AccessColors.bankAccentLight]}
+            style={styles.infoNotice}
+          >
+            <Text style={styles.infoEmoji}>ℹ️</Text>
             <Text style={styles.infoText}>
               Settings are applied immediately to the current session.
               Some settings may require a page refresh to take full effect.
             </Text>
-          </View>
+          </LinearGradient>
         </ScrollView>
       </View>
     </SafeAreaView>
   );
 }
 
-// â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Institution chip (with scale animation) ────────────────────────────────
 
-function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
+function InstitutionChip({
+  inst,
+  selected,
+  onPress,
+}: {
+  inst: (typeof INSTITUTIONS)[0];
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  function handlePress() {
+    Animated.sequence([
+      Animated.spring(scale, { toValue: 0.93, useNativeDriver: true, speed: 30, bounciness: 0 }),
+      Animated.spring(scale, { toValue: 1.05, useNativeDriver: true, speed: 20, bounciness: 5 }),
+      Animated.spring(scale, { toValue: 1,    useNativeDriver: true, speed: 20, bounciness: 3 }),
+    ]).start();
+    onPress();
+  }
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Pressable
+        style={({ pressed }: any) => [
+          styles.optionChip,
+          selected && [styles.optionChipSelected, { borderColor: inst.accent, backgroundColor: inst.accent }],
+          pressed && styles.optionChipPressed,
+          ...Platform.select({ web: [{ outlineStyle: 'none' }], default: [] }),
+        ]}
+        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        accessibilityLabel={`Select institution: ${inst.label}`}
+      >
+        <Text style={styles.chipEmoji}>{inst.emoji}</Text>
+        <Text
+          style={[
+            styles.optionChipLabel,
+            selected && styles.optionChipLabelSelected,
+          ]}
+        >
+          {inst.label}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────
+
+function SettingsSection({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: string;
+  children: React.ReactNode;
+}) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionCard}>{children}</View>
+      <View style={styles.sectionTitleRow}>
+        <Text style={styles.sectionIcon}>{icon}</Text>
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
+      <View style={[styles.sectionCard, AccessShadow.sm as any]}>{children}</View>
     </View>
   );
 }
 
-function SettingRow({ children }: { children: React.ReactNode }) {
-  return <View style={styles.settingRow}>{children}</View>;
+function SettingRow({
+  children,
+  isLast,
+}: {
+  children: React.ReactNode;
+  isLast?: boolean;
+}) {
+  return (
+    <View style={[styles.settingRow, isLast && styles.settingRowLast]}>
+      {children}
+    </View>
+  );
 }
 
-// â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Styles ─────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: AccessColors.background },
@@ -209,12 +285,19 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  section: { gap: AccessSpacing.md },
+  section: { gap: AccessSpacing.sm },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: AccessSpacing.sm,
+    paddingLeft: 2,
+    marginBottom: 2,
+  },
+  sectionIcon: { fontSize: 16 },
   sectionTitle: {
     fontSize: AccessFontSize.md,
-    fontWeight: AccessFontWeight.semibold,
+    fontWeight: AccessFontWeight.bold,
     color: AccessColors.textPrimary,
-    paddingLeft: AccessSpacing.xs,
   },
   sectionCard: {
     backgroundColor: AccessColors.cardDefault,
@@ -230,15 +313,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: AccessSpacing.md,
-    paddingHorizontal: AccessSpacing.xl,
+    paddingHorizontal: AccessSpacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: AccessColors.divider,
     gap: AccessSpacing.md,
   },
-  settingInfo: { flex: 1, gap: 2 },
+  settingRowLast: { borderBottomWidth: 0 },
+  settingInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: AccessSpacing.sm,
+  },
+  settingEmoji: { fontSize: 18, marginTop: 1 },
+  settingText: { flex: 1, gap: 2 },
   settingLabel: {
     fontSize: AccessFontSize.base,
-    fontWeight: AccessFontWeight.medium,
+    fontWeight: AccessFontWeight.semibold,
     color: AccessColors.textPrimary,
   },
   settingDesc: {
@@ -248,58 +339,53 @@ const styles = StyleSheet.create({
   },
 
   // Institution chips
-  optionRow: {
+  chipRow: {
     flexDirection: 'row',
     gap: AccessSpacing.md,
-    padding: AccessSpacing.xl,
+    padding: AccessSpacing.lg,
     flexWrap: 'wrap',
   },
   optionChip: {
-    paddingVertical: AccessSpacing.md,
-    paddingHorizontal: AccessSpacing.lg,
-    borderRadius: 99,
-    borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: AccessSpacing.sm + 2,
+    paddingHorizontal: AccessSpacing.md,
+    borderRadius: AccessRadius.full,
+    borderWidth: 2,
     borderColor: AccessColors.border,
     backgroundColor: AccessColors.background,
-    ...Platform.select({ web: { outlineStyle: 'none' }, default: {} }),
   },
   optionChipSelected: {
-    borderColor: AccessColors.navy,
-    backgroundColor: AccessColors.navy,
+    // borderColor and backgroundColor set inline
   },
-  optionChipPressed: { opacity: 0.75 },
-  optionChipFocused: {
-    ...Platform.select({
-      web: { outlineWidth: 3, outlineColor: AccessColors.focusRing, outlineStyle: 'solid', outlineOffset: 2 },
-      default: {},
-    }),
-  } as any,
+  optionChipPressed: { opacity: 0.8 },
+  chipEmoji: { fontSize: 16 },
   optionChipLabel: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.medium,
+    fontWeight: AccessFontWeight.semibold,
     color: AccessColors.textSecondary,
   },
-  optionChipLabelSelected: { color: AccessColors.textOnDark },
+  optionChipLabelSelected: { color: '#FFFFFF' },
 
   // Language rows
   langRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingVertical: AccessSpacing.md,
-    paddingHorizontal: AccessSpacing.xl,
+    paddingHorizontal: AccessSpacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: AccessColors.divider,
-    ...Platform.select({ web: { outlineStyle: 'none' }, default: {} }),
+    gap: AccessSpacing.md,
   },
-  langRowSelected: {
-    backgroundColor: AccessColors.background,
-  },
+  langRowLast: { borderBottomWidth: 0 },
+  langRowSelected: { backgroundColor: AccessColors.tealFaint },
   langRowPressed: { backgroundColor: AccessColors.cardHover },
-  langInfo: { gap: 2 },
+  langFlag: { fontSize: 22 },
+  langInfo: { flex: 1, gap: 2 },
   langLabel: {
     fontSize: AccessFontSize.base,
-    fontWeight: AccessFontWeight.medium,
+    fontWeight: AccessFontWeight.semibold,
     color: AccessColors.textPrimary,
   },
   langNative: {
@@ -315,29 +401,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioOuterSelected: { borderColor: AccessColors.navy },
+  radioOuterSelected: { borderColor: AccessColors.teal },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: AccessColors.navy,
+    backgroundColor: AccessColors.teal,
   },
 
   // Info notice
   infoNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: AccessSpacing.sm,
     padding: AccessSpacing.md,
-    backgroundColor: AccessColors.cardDefault,
     borderWidth: 1,
-    borderColor: AccessColors.borderLight,
-    borderRadius: AccessRadius.sm,
+    borderColor: AccessColors.teal + '30',
+    borderRadius: AccessRadius.md,
   },
+  infoEmoji: { fontSize: 16 },
   infoText: {
+    flex: 1,
     fontSize: AccessFontSize.sm,
-    color: AccessColors.textSecondary,
+    color: AccessColors.tealDark,
     lineHeight: 20,
-    textAlign: 'center',
   },
 });
-
-
-

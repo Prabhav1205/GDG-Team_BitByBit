@@ -2,25 +2,28 @@
  * ModeCard — a single communication mode selection option.
  *
  * Designed to feel like a physical control on a public kiosk:
- *   — Large rectangular hit area
- *   — Clear icon, title, and description hierarchy
- *   — Restrained hover / selected states
+ *   — Large rectangular hit area with scale spring animation
+ *   — Color-coded icon container per mode
+ *   — Vivid selected state with teal glow shadow
+ *   — Animated checkmark ring on selection
  *   — Fully keyboard-accessible with visible focus ring
  *
  * States:
- *   default  — white background, subtle border
- *   hover    — slightly darker border
+ *   default  — white background, subtle shadow
+ *   hover    — lifted shadow + scale 1.02
  *   focus    — high-visibility focus ring (WCAG AA+)
- *   selected — teal border + tinted background
+ *   selected — teal border + tinted background + glow shadow
+ *   pressed  — scale 0.97
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
   Platform,
+  Animated,
 } from 'react-native';
 
 import { KioskIcon, type IconName } from './KioskIcon';
@@ -30,9 +33,11 @@ import {
   AccessRadius,
   AccessFontSize,
   AccessFontWeight,
+  AccessShadow,
+  AccessAnimation,
 } from '@/constants/access-theme';
 
-// ── Types ─────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────
 
 export interface ModeCardProps {
   /** The icon to render. */
@@ -51,7 +56,20 @@ export interface ModeCardProps {
   shortcutNumber?: number;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────
+// ── Accent colour map ──────────────────────────────────────────────────────
+
+const MODE_ACCENTS: Record<string, { accent: string; light: string; border: string }> = {
+  sign:            { accent: AccessColors.signAccent,    light: AccessColors.signAccentLight,    border: AccessColors.signAccent + '50' },
+  voice:           { accent: AccessColors.voiceAccent,   light: AccessColors.voiceAccentLight,   border: AccessColors.voiceAccent + '50' },
+  text:            { accent: AccessColors.textAccent,    light: AccessColors.textAccentLight,    border: AccessColors.textAccent + '50' },
+  'touch':         { accent: AccessColors.touchAccent,   light: AccessColors.touchAccentLight,   border: AccessColors.touchAccent + '50' },
+};
+
+function getAccent(iconName: string) {
+  return MODE_ACCENTS[iconName] ?? { accent: AccessColors.teal, light: AccessColors.tealFaint, border: AccessColors.teal + '50' };
+}
+
+// ── Component ──────────────────────────────────────────────────────────────
 
 export function ModeCard({
   iconName,
@@ -63,77 +81,122 @@ export function ModeCard({
   shortcutNumber,
 }: ModeCardProps) {
   const [hovered, setHovered] = useState(false);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const checkAnim = useRef(new Animated.Value(0)).current;
 
-  const iconColor = selected
-    ? AccessColors.teal
-    : AccessColors.navy;
+  const accent = getAccent(iconName);
+
+  // Scale spring on hover/press
+  function animateTo(toValue: number, duration = AccessAnimation.fast) {
+    Animated.spring(scaleAnim, {
+      toValue,
+      useNativeDriver: true,
+      speed: 30,
+      bounciness: 4,
+    }).start();
+  }
+
+  // Animate checkmark in/out when selection changes
+  useEffect(() => {
+    Animated.spring(checkAnim, {
+      toValue: selected ? 1 : 0,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 6,
+    }).start();
+  }, [selected, checkAnim]);
+
+  const iconColor = selected ? accent.accent : AccessColors.navy;
 
   return (
-    <Pressable
-      onPress={onSelect}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      style={({ pressed, focused }: any) => [
-        styles.card,
-        hovered && !selected && styles.cardHover,
-        selected && styles.cardSelected,
-        pressed && styles.cardPressed,
-        focused && styles.cardFocused,
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={`Option ${shortcutNumber ?? ''}: ${title}, ${description}`}
-      accessibilityState={{ selected }}
-      accessibilityHint={`Press key ${shortcutNumber ?? ''} or tap to select ${title}`}
-      testID={testID}
-    >
-      {/* Icon container */}
-      <View
-        style={[
-          styles.iconContainer,
-          selected && styles.iconContainerSelected,
+    <Animated.View style={[styles.wrapper, { transform: [{ scale: scaleAnim }] }]}>
+      <Pressable
+        onPress={onSelect}
+        onHoverIn={() => { setHovered(true); animateTo(1.025); }}
+        onHoverOut={() => { setHovered(false); animateTo(1); }}
+        onPressIn={() => animateTo(0.97)}
+        onPressOut={() => animateTo(hovered ? 1.025 : 1)}
+        style={({ focused }: any) => [
+          styles.card,
+          hovered && !selected && styles.cardHover,
+          selected && styles.cardSelected,
+          selected && (AccessShadow.teal as any),
+          !selected && !hovered && (AccessShadow.sm as any),
+          hovered && !selected && (AccessShadow.md as any),
+          focused && styles.cardFocused,
         ]}
-        aria-hidden
+        accessibilityRole="button"
+        accessibilityLabel={`Option ${shortcutNumber ?? ''}: ${title}, ${description}`}
+        accessibilityState={{ selected }}
+        accessibilityHint={`Press key ${shortcutNumber ?? ''} or tap to select ${title}`}
+        testID={testID}
       >
-        <KioskIcon name={iconName} size={36} color={iconColor} />
-      </View>
+        {/* Coloured top accent bar */}
+        <View style={[styles.accentBar, { backgroundColor: accent.accent }]} />
 
-      {/* Text content */}
-      <View style={styles.textBlock}>
-        <View style={styles.titleRow}>
-          <Text
-            style={[
-              styles.title,
-              selected && styles.titleSelected,
-            ]}
-            numberOfLines={1}
-          >
-            {title}
+        {/* Icon container */}
+        <View
+          style={[
+            styles.iconContainer,
+            selected
+              ? [styles.iconContainerSelected, { backgroundColor: accent.light, borderColor: accent.border }]
+              : styles.iconContainerDefault,
+          ]}
+          aria-hidden
+        >
+          <KioskIcon name={iconName} size={34} color={iconColor} />
+        </View>
+
+        {/* Text content */}
+        <View style={styles.textBlock}>
+          <View style={styles.titleRow}>
+            <Text
+              style={[
+                styles.title,
+                selected && [styles.titleSelected, { color: accent.accent }],
+              ]}
+              numberOfLines={1}
+            >
+              {title}
+            </Text>
+            {Boolean(shortcutNumber) && (
+              <View style={styles.shortcutBadge} aria-hidden>
+                <Text style={styles.shortcutText}>{shortcutNumber}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.description} numberOfLines={2}>
+            {description}
           </Text>
-          {Boolean(shortcutNumber) && (
-            <View style={styles.shortcutBadge} aria-hidden>
-              <Text style={styles.shortcutText}>{shortcutNumber}</Text>
-            </View>
-          )}
         </View>
-        <Text style={styles.description} numberOfLines={2}>
-          {description}
-        </Text>
-      </View>
 
-      {/* Selected indicator */}
-      {selected && (
-        <View style={styles.selectedIndicator} aria-hidden>
-          <View style={styles.selectedDot} />
-        </View>
-      )}
-    </Pressable>
+        {/* Animated checkmark badge (top-right corner) */}
+        <Animated.View
+          style={[
+            styles.checkBadge,
+            {
+              transform: [{ scale: checkAnim }],
+              opacity: checkAnim,
+              backgroundColor: accent.accent,
+            },
+          ]}
+          aria-hidden
+        >
+          <KioskIcon name="check" size={10} color="#FFFFFF" />
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────
+// ── Styles ─────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // ── Card base ──────────────────────────────────────────────────────────
+  wrapper: {
+    flex: 1,
+  },
+
+  // ── Card base ─────────────────────────────────────────────────────────────
   card: {
     flex: 1,
     minHeight: 172,
@@ -143,11 +206,13 @@ const styles = StyleSheet.create({
     borderRadius: AccessRadius.md,
     padding: AccessSpacing.xl,
     gap: AccessSpacing.md,
+    position: 'relative',
+    overflow: 'hidden',
     // Ensure keyboard focus is visible
     outlineStyle: Platform.select({ web: 'none' as any, default: undefined }),
   },
 
-  // ── States ─────────────────────────────────────────────────────────────
+  // ── States ────────────────────────────────────────────────────────────────
   cardHover: {
     borderColor: AccessColors.borderHover,
     backgroundColor: AccessColors.cardHover,
@@ -156,9 +221,6 @@ const styles = StyleSheet.create({
     borderColor: AccessColors.tealBorder,
     borderWidth: 2,
     backgroundColor: AccessColors.cardSelected,
-  },
-  cardPressed: {
-    opacity: 0.88,
   },
   // Web-specific focus ring — high visibility per WCAG 2.4.11
   cardFocused: {
@@ -173,23 +235,36 @@ const styles = StyleSheet.create({
     }),
   },
 
-  // ── Icon ───────────────────────────────────────────────────────────────
+  // ── Accent top bar ────────────────────────────────────────────────────────
+  accentBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderTopLeftRadius: AccessRadius.md,
+    borderTopRightRadius: AccessRadius.md,
+    opacity: 0.85,
+  },
+
+  // ── Icon ──────────────────────────────────────────────────────────────────
   iconContainer: {
-    width: 56,
-    height: 56,
+    width: 58,
+    height: 58,
     borderRadius: AccessRadius.sm,
-    backgroundColor: AccessColors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
+  },
+  iconContainerDefault: {
+    backgroundColor: AccessColors.background,
     borderColor: AccessColors.borderLight,
   },
   iconContainerSelected: {
-    backgroundColor: AccessColors.tealBorder + '14', // teal at 8% opacity
-    borderColor: AccessColors.tealBorder + '30',
+    // backgroundColor and borderColor set inline
   },
 
-  // ── Text ───────────────────────────────────────────────────────────────
+  // ── Text ──────────────────────────────────────────────────────────────────
   textBlock: {
     gap: AccessSpacing.xs,
     flex: 1,
@@ -202,16 +277,14 @@ const styles = StyleSheet.create({
   },
   shortcutBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: AccessRadius.sm,
-    backgroundColor: AccessColors.background,
-    borderWidth: 1,
-    borderColor: AccessColors.borderLight,
+    backgroundColor: AccessColors.navy,
   },
   shortcutText: {
     fontSize: AccessFontSize.xs,
     fontWeight: AccessFontWeight.bold,
-    color: AccessColors.navy,
+    color: '#FFFFFF',
   },
   title: {
     fontSize: AccessFontSize.lg,
@@ -220,7 +293,7 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   titleSelected: {
-    color: AccessColors.tealDark,
+    // color set inline via accent
   },
   description: {
     fontSize: AccessFontSize.base,
@@ -229,16 +302,15 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // ── Selected indicator (top-right corner dot) ─────────────────────────
-  selectedIndicator: {
+  // ── Animated check badge ──────────────────────────────────────────────────
+  checkBadge: {
     position: 'absolute',
     top: AccessSpacing.md,
     right: AccessSpacing.md,
-  },
-  selectedDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: AccessColors.teal,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

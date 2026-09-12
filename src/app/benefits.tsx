@@ -1,4 +1,4 @@
-﻿/**
+/**
  * /benefits â€” Services & Benefits page.
  *
  * Mock eligibility cards with filter tabs.

@@ -12,7 +12,7 @@
  *   — Animated mic button with pulsing ring when active
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -38,7 +38,6 @@ import {
   AccessFontSize,
   AccessFontWeight,
   AccessShadow,
-  AccessAnimation,
 } from '@/constants/access-theme';
 
 const PRESET_QUERIES = [
@@ -60,11 +59,11 @@ export default function VoicePage() {
   const [backHovered, setBackHovered] = useState(false);
 
   // Animation refs
-  const pulseOuter1 = useRef(new Animated.Value(1)).current;
-  const pulseOuter2 = useRef(new Animated.Value(1)).current;
-  const pulseOpacity1 = useRef(new Animated.Value(0.5)).current;
-  const pulseOpacity2 = useRef(new Animated.Value(0.3)).current;
-  const micScale = useRef(new Animated.Value(1)).current;
+  const [pulseOuter1] = useState(() => new Animated.Value(1));
+  const [pulseOuter2] = useState(() => new Animated.Value(1));
+  const [pulseOpacity1] = useState(() => new Animated.Value(0.5));
+  const [pulseOpacity2] = useState(() => new Animated.Value(0.3));
+  const [micScale] = useState(() => new Animated.Value(1));
 
   // Listening pulse rings
   useEffect(() => {

@@ -31,19 +31,21 @@ import {
   AccessFontWeight,
 } from '@/constants/access-theme';
 
-export default function TextPage() {
-  const { clearSession } = useSession();
+export default function TextToSpeakScreen() {
+  const { session, clearSession, broadcastTranslation } = useSession();
   const { announce } = useAudioNav();
 
   const institutions = PhraseService.getInstitutions();
-  const [selectedInstId, setSelectedInstId] = useState('general');
+  const [selectedInstId, setSelectedInstId] = useState<string>(
+    session.institution || 'bank'
+  );
   const [inputText, setInputText] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechRate, setSpeechRate] = useState<number>(1.0);
   const [recentPhrases, setRecentPhrases] = useState<string[]>([]);
 
   const currentInstitution: InstitutionConfig =
-    PhraseService.getInstitutionById(selectedInstId);
+    PhraseService.getInstitutionById(selectedInstId || 'bank');
 
   useEffect(() => {
     announce(
@@ -64,6 +66,7 @@ export default function TextPage() {
 
     setIsSpeaking(true);
     announce(`Speaking: ${trimmed}`);
+    broadcastTranslation(trimmed, 'Text');
 
     // Add to recent history if not already top
     setRecentPhrases((prev) => {

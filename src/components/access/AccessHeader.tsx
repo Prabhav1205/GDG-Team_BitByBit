@@ -8,7 +8,7 @@
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   Platform,
@@ -35,8 +35,8 @@ export function AccessHeader() {
   const { width } = useWindowDimensions();
   const isNarrow = width < 600;
 
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const pulseOpacity = useRef(new Animated.Value(0.7)).current;
+  const [pulseAnim] = useState(() => new Animated.Value(1));
+  const [pulseOpacity] = useState(() => new Animated.Value(0.7));
   const [settingsHovered, setSettingsHovered] = useState(false);
 
   // Pulsing status dot animation

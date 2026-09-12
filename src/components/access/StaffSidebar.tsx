@@ -1,4 +1,4 @@
-﻿/**
+/**
  * StaffSidebar â€” left navigation panel for staff-facing pages.
  *
  * Shows navigation links and a session status summary.

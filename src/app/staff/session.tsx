@@ -1,8 +1,10 @@
 /**
- * /staff/session â€” Staff Session Detail
+ * /staff/session — Staff Session Detail & Handoff View
  *
- * Detailed view of the current active user session.
- * All data is mock/static. Teammates can wire up WebSocket/backend.
+ * Employee-facing detailed view showing:
+ *   — Real-time conversation stream (citizen translations + staff replies)
+ *   — Converted message history by mode (Sign Language, Voice, Text, Assisted Touch)
+ *   — Complete session timeline & supervisor handoff log
  */
 
 import React, { useState } from 'react';
@@ -22,6 +24,8 @@ import { StaffSidebar } from '@/components/access/StaffSidebar';
 import { ConversationBubble, type ConversationMessage } from '@/components/access/ConversationBubble';
 import { StatusBadge } from '@/components/access/StatusBadge';
 import { KioskIcon } from '@/components/access/KioskIcon';
+import { useSession } from '@/context/SessionContext';
+import { speechEngine } from '@/services/speech-engine';
 import {
   AccessColors,
   AccessSpacing,
@@ -30,62 +34,43 @@ import {
   AccessFontWeight,
 } from '@/constants/access-theme';
 
-// â”€â”€ Mock data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-const SESSION_INFO = {
-  user: 'User #1042',
-  institution: 'Bank',
-  mode: 'Sign Language',
-  status: 'Active',
-  startedAt: '09:41',
-  sessionId: 'lp3m7x-k8q2nf',
-};
-
-const MOCK_MESSAGES: ConversationMessage[] = [
-  { id: '1', sender: 'user',  text: 'I need help opening a bank account.',        timestamp: '09:42' },
-  { id: '2', sender: 'staff', text: 'Sure, I can help you with that.',             timestamp: '09:43' },
-  { id: '3', sender: 'user',  text: 'Do I need any documents?',                   timestamp: '09:43' },
-  { id: '4', sender: 'staff', text: 'You will need a valid identity document.',   timestamp: '09:44' },
-];
-
-const CONVERTED_MESSAGES = [
-  { id: 'c1', text: 'I need help opening a bank account.', mode: 'Sign Language', time: '09:42' },
-  { id: 'c2', text: 'Do I need any documents?',            mode: 'Sign Language', time: '09:43' },
-];
-
-const TIMELINE = [
-  { time: '09:41', event: 'Session started',              type: 'info'    },
-  { time: '09:42', event: 'Mode selected: Sign Language', type: 'info'    },
-  { time: '09:43', event: 'Message received from user',   type: 'message' },
-  { time: '09:44', event: 'Staff response sent',          type: 'success' },
-];
-
-const DOT_COLOR: Record<string, string> = {
-  info:    AccessColors.navy,
-  message: AccessColors.teal,
-  success: AccessColors.statusGreen,
-};
-
-// â”€â”€ Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 export default function StaffSessionPage() {
+  const { session, addStaffReply, markSessionResolved } = useSession();
   const [staffResponse, setStaffResponse] = useState('');
-  const [messages, setMessages] = useState<ConversationMessage[]>(MOCK_MESSAGES);
+
+  const activeMode = session.communicationMode
+    ? session.communicationMode.replace('-', ' ').toUpperCase()
+    : 'SIGN LANGUAGE';
+
+  // Build conversation messages array from liveTranslations + logs
+  const conversationMessages: ConversationMessage[] = [
+    ...session.liveTranslations.map((t) => ({
+      id: t.id,
+      sender: 'user' as const,
+      text: t.text,
+      timestamp: t.timestamp,
+    })),
+    ...session.sessionLogs
+      .filter((l) => l.type === 'STAFF_REPLY')
+      .map((l) => ({
+        id: l.id,
+        sender: 'staff' as const,
+        text: l.content.replace('Staff Reply sent to Kiosk: ', '').replace(/^"|"$/g, ''),
+        timestamp: l.timestamp,
+      })),
+  ].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 
   function handleSendResponse() {
     if (!staffResponse.trim()) return;
-    const msg: ConversationMessage = {
-      id: Date.now().toString(),
-      sender: 'staff',
-      text: staffResponse.trim(),
-      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-    };
-    setMessages((prev) => [...prev, msg]);
+    const text = staffResponse.trim();
+    addStaffReply(text);
+    speechEngine.speak(text, { lang: session.language });
     setStaffResponse('');
   }
 
   function handleEndSession() {
-    router.replace('/staff' as any);
+    markSessionResolved();
+    router.replace('/staff');
   }
 
   return (
@@ -95,14 +80,14 @@ export default function StaffSessionPage() {
         <View style={styles.header}>
           <Pressable
             style={({ pressed }: any) => [styles.backBtn, pressed && styles.btnPressed]}
-            onPress={() => router.push('/staff' as any)}
+            onPress={() => router.push('/staff')}
             accessibilityRole="button"
             accessibilityLabel="Back to dashboard"
           >
             <KioskIcon name="back" size={16} color={AccessColors.textOnDarkMuted} />
             <Text style={styles.backLabel}>Dashboard</Text>
           </Pressable>
-          <Text style={styles.headerTitle}>Session Detail</Text>
+          <Text style={styles.headerTitle}>Session Detail — {session.sessionId}</Text>
           <Pressable
             style={({ pressed }: any) => [styles.endBtn, pressed && styles.btnPressed]}
             onPress={handleEndSession}
@@ -115,7 +100,10 @@ export default function StaffSessionPage() {
 
         <View style={styles.body}>
           {/* Sidebar */}
-          <StaffSidebar sessionUser={SESSION_INFO.user} sessionStatus={SESSION_INFO.status} />
+          <StaffSidebar
+            sessionUser={`Citizen ${session.sessionId.slice(-4)}`}
+            sessionStatus={session.isResolved ? 'Resolved' : 'Active'}
+          />
 
           {/* Main */}
           <View style={styles.main}>
@@ -126,27 +114,34 @@ export default function StaffSessionPage() {
             >
               {/* Session info strip */}
               <View style={styles.infoStrip}>
-                <InfoPill label="User" value={SESSION_INFO.user} />
-                <InfoPill label="Institution" value={SESSION_INFO.institution} />
-                <InfoPill label="Mode" value={SESSION_INFO.mode} />
-                <InfoPill label="Started" value={SESSION_INFO.startedAt} />
-                <StatusBadge label={SESSION_INFO.status} variant="active" />
+                <InfoPill label="Session ID" value={session.sessionId} />
+                <InfoPill label="Institution" value={session.institution ? session.institution.toUpperCase() : 'BANK'} />
+                <InfoPill label="Mode" value={activeMode} />
+                <InfoPill label="Started" value={session.startedAt} />
+                <StatusBadge
+                  label={session.isResolved ? 'RESOLVED' : 'ACTIVE'}
+                  variant={session.isResolved ? 'inactive' : 'active'}
+                />
               </View>
 
               {/* Two-column area */}
               <View style={styles.twoCol}>
                 {/* Left: Conversation */}
                 <View style={styles.col}>
-                  <Text style={styles.colTitle}>Conversation</Text>
+                  <Text style={styles.colTitle}>Conversation History</Text>
                   <View style={styles.chatCard}>
-                    {messages.map((msg) => (
-                      <ConversationBubble key={msg.id} message={msg} />
-                    ))}
+                    {conversationMessages.length === 0 ? (
+                      <Text style={styles.emptyText}>No messages recorded yet in this session.</Text>
+                    ) : (
+                      conversationMessages.map((msg) => (
+                        <ConversationBubble key={msg.id} message={msg} />
+                      ))
+                    )}
                   </View>
 
                   {/* Response input */}
                   <View style={styles.responseBox}>
-                    <Text style={styles.responseLabel}>Staff Response</Text>
+                    <Text style={styles.responseLabel}>Staff Response (Broadcasts to Kiosk & Speaks Aloud)</Text>
                     <TextInput
                       style={styles.responseInput}
                       value={staffResponse}
@@ -155,7 +150,6 @@ export default function StaffSessionPage() {
                       placeholderTextColor={AccessColors.textTertiary}
                       multiline
                       accessibilityLabel="Staff response input"
-                      testID="staff-response-input"
                     />
                     <Pressable
                       style={({ pressed }: any) => [
@@ -179,7 +173,7 @@ export default function StaffSessionPage() {
                           !staffResponse.trim() && styles.sendBtnLabelDisabled,
                         ]}
                       >
-                        Send Response
+                        Send Response to Kiosk
                       </Text>
                     </Pressable>
                   </View>
@@ -187,30 +181,41 @@ export default function StaffSessionPage() {
 
                 {/* Right: Converted messages + Timeline */}
                 <View style={styles.colNarrow}>
-                  <Text style={styles.colTitle}>Converted Messages</Text>
+                  <Text style={styles.colTitle}>Converted Input Stream</Text>
                   <View style={styles.sideCard}>
-                    {CONVERTED_MESSAGES.map((m) => (
-                      <View key={m.id} style={styles.convertedMsg}>
-                        <View style={styles.convertedMsgHeader}>
-                          <Text style={styles.convertedMsgTime}>{m.time}</Text>
-                          <Text style={styles.convertedMsgMode}>{m.mode}</Text>
+                    {session.liveTranslations.length === 0 ? (
+                      <Text style={styles.emptyText}>No translated inputs.</Text>
+                    ) : (
+                      session.liveTranslations.map((m) => (
+                        <View key={m.id} style={styles.convertedMsg}>
+                          <View style={styles.convertedMsgHeader}>
+                            <Text style={styles.convertedMsgTime}>{m.timestamp}</Text>
+                            <Text style={styles.convertedMsgMode}>{m.modeLabel}</Text>
+                          </View>
+                          <Text style={styles.convertedMsgText}>{m.text}</Text>
                         </View>
-                        <Text style={styles.convertedMsgText}>{m.text}</Text>
-                      </View>
-                    ))}
+                      ))
+                    )}
                   </View>
 
-                  <Text style={[styles.colTitle, { marginTop: AccessSpacing.lg }]}>Session Timeline</Text>
+                  <Text style={[styles.colTitle, { marginTop: AccessSpacing.lg }]}>Session Log & Handoff Timeline</Text>
                   <View style={styles.sideCard}>
-                    {TIMELINE.map((entry, i) => (
-                      <View key={i} style={styles.timelineItem}>
+                    {session.sessionLogs.map((entry) => (
+                      <View key={entry.id} style={styles.timelineItem}>
                         <View style={styles.timelineDotCol}>
-                          <View style={[styles.timelineDot, { backgroundColor: DOT_COLOR[entry.type] }]} />
-                          {i < TIMELINE.length - 1 && <View style={styles.timelineLine} />}
+                          <View
+                            style={[
+                              styles.timelineDot,
+                              entry.type === 'CITIZEN_INPUT' && { backgroundColor: AccessColors.teal },
+                              entry.type === 'ELIGIBILITY' && { backgroundColor: '#F59E0B' },
+                              entry.type === 'STAFF_REPLY' && { backgroundColor: AccessColors.navy },
+                              entry.type === 'SUPERVISOR_NOTE' && { backgroundColor: '#8B5CF6' },
+                            ]}
+                          />
                         </View>
                         <View style={styles.timelineContent}>
-                          <Text style={styles.timelineTime}>{entry.time}</Text>
-                          <Text style={styles.timelineEvent}>{entry.event}</Text>
+                          <Text style={styles.timelineTime}>{entry.timestamp}</Text>
+                          <Text style={styles.timelineEvent}>{entry.content}</Text>
                         </View>
                       </View>
                     ))}
@@ -225,7 +230,7 @@ export default function StaffSessionPage() {
   );
 }
 
-// â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Sub-components ─────────────────────────────────────────────────────────
 
 function InfoPill({ label, value }: { label: string; value: string }) {
   return (
@@ -236,7 +241,7 @@ function InfoPill({ label, value }: { label: string; value: string }) {
   );
 }
 
-// â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Styles ────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F1F3F7' },
@@ -442,27 +447,21 @@ const styles = StyleSheet.create({
   timelineItem: {
     flexDirection: 'row',
     gap: AccessSpacing.md,
-    minHeight: 44,
+    minHeight: 36,
   },
   timelineDotCol: {
     alignItems: 'center',
-    width: 16,
+    width: 14,
   },
   timelineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginTop: 4,
-  },
-  timelineLine: {
-    width: 1,
-    flex: 1,
-    backgroundColor: AccessColors.divider,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     marginTop: 4,
   },
   timelineContent: {
     flex: 1,
-    paddingBottom: AccessSpacing.sm,
+    paddingBottom: AccessSpacing.xs,
     gap: 2,
   },
   timelineTime: {
@@ -474,6 +473,8 @@ const styles = StyleSheet.create({
     fontSize: AccessFontSize.sm,
     color: AccessColors.textPrimary,
   },
+  emptyText: {
+    color: AccessColors.textTertiary,
+    fontStyle: 'italic',
+  },
 });
-
-

@@ -11,7 +11,7 @@
  *   — Vibrant teal switch track
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -25,9 +25,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { router } from 'expo-router';
 import { AccessHeader } from '@/components/access/AccessHeader';
 import { PageHeader } from '@/components/access/PageHeader';
-import { useSession, type InstitutionType } from '@/context/SessionContext';
+import { useSession, type InstitutionType, type AccessibilitySettings } from '@/context/SessionContext';
 import {
   AccessColors,
   AccessSpacing,
@@ -39,12 +40,7 @@ import {
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-type AccessibilityKey =
-  | 'highContrast'
-  | 'largeText'
-  | 'reducedMotion'
-  | 'screenReaderFriendly'
-  | 'largeTouchTargets';
+type AccessibilityKey = keyof AccessibilitySettings;
 
 const ACCESSIBILITY_SETTINGS: { key: AccessibilityKey; label: string; description: string; emoji: string }[] = [
   { key: 'highContrast',          emoji: '🔳', label: 'High Contrast',           description: 'Maximum contrast for low vision users' },
@@ -52,6 +48,8 @@ const ACCESSIBILITY_SETTINGS: { key: AccessibilityKey; label: string; descriptio
   { key: 'reducedMotion',         emoji: '⏸️', label: 'Reduced Motion',          description: 'Disables non-essential animations' },
   { key: 'screenReaderFriendly',  emoji: '👁️', label: 'Screen Reader Friendly',  description: 'Optimises layout for screen reader use' },
   { key: 'largeTouchTargets',     emoji: '👆', label: 'Large Touch Targets',     description: 'Increases minimum tap target size' },
+  { key: 'dwellClick',            emoji: '⏱️', label: 'Dwell Selection (Tremor Tolerant)', description: 'Auto-selects button after holding pointer over it for 1.5s' },
+  { key: 'switchScanning',        emoji: '🔘', label: 'Switch Scanning Mode',    description: 'Auto-cycles highlight sequentially; trigger via Space/Enter or Switch Button' },
 ];
 
 const LANGUAGES: { code: string; label: string; nativeLabel: string; flag: string }[] = [
@@ -70,19 +68,7 @@ const INSTITUTIONS: { id: InstitutionType; label: string; emoji: string; accent:
 // ── Screen ──────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const { session, setInstitution, setLanguage } = useSession();
-
-  const [a11y, setA11y] = useState<Record<AccessibilityKey, boolean>>({
-    highContrast:         false,
-    largeText:            false,
-    reducedMotion:        false,
-    screenReaderFriendly: false,
-    largeTouchTargets:    false,
-  });
-
-  function toggleA11y(key: AccessibilityKey) {
-    setA11y((prev) => ({ ...prev, [key]: !prev[key] }));
-  }
+  const { session, setInstitution, setLanguage, updateAccessibility } = useSession();
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -96,26 +82,45 @@ export default function SettingsPage() {
           showsVerticalScrollIndicator={false}
         >
           {/* ── Accessibility ─────────────────────────────────────────── */}
-          <SettingsSection title="Accessibility" icon="🛡️">
-            {ACCESSIBILITY_SETTINGS.map((s, i) => (
-              <SettingRow key={s.key} isLast={i === ACCESSIBILITY_SETTINGS.length - 1}>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingEmoji}>{s.emoji}</Text>
-                  <View style={styles.settingText}>
-                    <Text style={styles.settingLabel}>{s.label}</Text>
-                    <Text style={styles.settingDesc}>{s.description}</Text>
+          <SettingsSection title="Accessibility & Motor Controls" icon="🛡️">
+            {ACCESSIBILITY_SETTINGS.map((s, i) => {
+              const active = session.accessibility[s.key];
+              return (
+                <SettingRow key={s.key} isLast={i === ACCESSIBILITY_SETTINGS.length - 1}>
+                  <View style={styles.settingInfo}>
+                    <Text style={styles.settingEmoji}>{s.emoji}</Text>
+                    <View style={styles.settingText}>
+                      <Text style={styles.settingLabel}>{s.label}</Text>
+                      <Text style={styles.settingDesc}>{s.description}</Text>
+                    </View>
                   </View>
-                </View>
-                <Switch
-                  value={a11y[s.key]}
-                  onValueChange={() => toggleA11y(s.key)}
-                  thumbColor={a11y[s.key] ? '#FFFFFF' : AccessColors.textTertiary}
-                  trackColor={{ false: AccessColors.border, true: AccessColors.teal }}
-                  accessibilityLabel={s.label}
-                  accessibilityRole="switch"
-                />
-              </SettingRow>
-            ))}
+                  <Switch
+                    value={active}
+                    onValueChange={() => updateAccessibility(s.key)}
+                    thumbColor={active ? '#FFFFFF' : AccessColors.textTertiary}
+                    trackColor={{ false: AccessColors.border, true: AccessColors.teal }}
+                    accessibilityLabel={s.label}
+                    accessibilityRole="switch"
+                  />
+                </SettingRow>
+              );
+            })}
+
+            {/* Quick link card for Assisted Touch */}
+            <Pressable
+              style={({ pressed }: any) => [
+                styles.launchCard,
+                pressed && styles.launchCardPressed,
+              ]}
+              onPress={() => router.push('/assisted-touch')}
+              accessibilityRole="button"
+              accessibilityLabel="Open Easy Interaction Mode"
+            >
+              <View style={styles.launchCardText}>
+                <Text style={styles.launchCardTitle}>⚡ Easy Interaction Interface →</Text>
+                <Text style={styles.launchCardDesc}>Launch the dedicated simplified UI with motor-tolerant dwell selection and single-switch controls.</Text>
+              </View>
+            </Pressable>
           </SettingsSection>
 
           {/* ── Institution ───────────────────────────────────────────── */}
@@ -196,7 +201,7 @@ function InstitutionChip({
   selected: boolean;
   onPress: () => void;
 }) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = useState(() => new Animated.Value(1));
 
   function handlePress() {
     Animated.sequence([
@@ -426,4 +431,22 @@ const styles = StyleSheet.create({
     color: AccessColors.tealDark,
     lineHeight: 20,
   },
+
+  // Launch card
+  launchCard: {
+    backgroundColor: AccessColors.tealLight,
+    borderWidth: 1.5,
+    borderColor: AccessColors.tealBorder,
+    borderRadius: AccessRadius.sm,
+    padding: AccessSpacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: AccessSpacing.md,
+    marginTop: AccessSpacing.md,
+  },
+  launchCardPressed: { opacity: 0.8 },
+  launchCardText: { flex: 1, gap: 2 },
+  launchCardTitle: { fontSize: AccessFontSize.base, fontWeight: AccessFontWeight.bold, color: AccessColors.teal },
+  launchCardDesc: { fontSize: AccessFontSize.sm, color: AccessColors.textSecondary, lineHeight: 18 },
 });

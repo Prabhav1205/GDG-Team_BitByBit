@@ -1,4 +1,4 @@
-﻿/**
+/**
  * /conversation ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Generic conversation interface.
  *
  * Shared by all communication modes once an exchange is in progress.

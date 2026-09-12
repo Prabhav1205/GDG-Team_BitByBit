@@ -9,7 +9,7 @@
  *   5. AssistanceBar — footer with staff call + language selector
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -35,7 +35,6 @@ import {
   AccessFontWeight,
   AccessRadius,
   AccessShadow,
-  AccessAnimation,
 } from '@/constants/access-theme';
 
 // ── Institution definitions ────────────────────────────────────────────────
@@ -95,8 +94,8 @@ function InstitutionCard({
   onPress: () => void;
   isNarrow?: boolean;
 }) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const checkAnim = useRef(new Animated.Value(selected ? 1 : 0)).current;
+  const [scaleAnim] = React.useState(() => new Animated.Value(1));
+  const [checkAnim] = React.useState(() => new Animated.Value(selected ? 1 : 0));
   const [hovered, setHovered] = React.useState(false);
 
   useEffect(() => {
@@ -204,7 +203,7 @@ export default function HomeScreen() {
   const { session, setInstitution } = useSession();
   const { width } = useWindowDimensions();
   const isNarrow = width < 600;
-  const badgePulse = useRef(new Animated.Value(0.95)).current;
+  const [badgePulse] = React.useState(() => new Animated.Value(0.95));
 
   // Subtle badge breathing
   useEffect(() => {

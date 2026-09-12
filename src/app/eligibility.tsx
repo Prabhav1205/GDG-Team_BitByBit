@@ -56,7 +56,7 @@ const INCOME_BRACKETS = [
 ] as const;
 
 export default function EligibilityPage() {
-  const { clearSession } = useSession();
+  const { clearSession, broadcastEligibilityMatch } = useSession();
   const { announce } = useAudioNav();
 
   const [schemes, setSchemes] = useState<Scheme[]>([]);
@@ -103,6 +103,17 @@ export default function EligibilityPage() {
     announce(
       `Profile evaluated. Found ${eligibleCount} fully eligible benefit schemes out of ${matchedResults.length} total schemes.`
     );
+
+    matchedResults.forEach((res) => {
+      if (res.isEligible) {
+        broadcastEligibilityMatch(
+          res.scheme.title,
+          res.scheme.category,
+          res.scheme.benefitSummary || 'Financial Assistance',
+          'Verify citizen ID & provide counter registration form'
+        );
+      }
+    });
   }
 
   return (

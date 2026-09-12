@@ -1,11 +1,13 @@
 /**
- * /assisted-touch â€” Easy Tap / Motor Accessibility Interface
+ * /assisted-touch — Easy Tap / Motor Accessibility Interface
  *
- * Full frontend placeholder demonstrating the Easy Tap concept.
- * Very large buttons, minimal text, high contrast, large spacing.
+ * Designed for users with motor disabilities, tremors, or limited dexterity:
+ *   — Tremor-tolerant Dwell-Click (timeout-based auto-selection on hover/hold)
+ *   — Switch-Scanning UI pattern (auto-cycling highlight with single-switch trigger)
+ *   — Large hit targets and high contrast modes
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,11 +16,14 @@ import {
   ScrollView,
   Platform,
   Switch,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccessHeader } from '@/components/access/AccessHeader';
 import { PageHeader } from '@/components/access/PageHeader';
+import { useAudioNav } from '@/context/AudioNavContext';
+import { useSession, type AccessibilitySettings } from '@/context/SessionContext';
 import {
   AccessColors,
   AccessSpacing,
@@ -27,47 +32,155 @@ import {
   AccessFontWeight,
 } from '@/constants/access-theme';
 
-// â”€â”€ Action buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Action buttons ─────────────────────────────────────────────────────────
 
 type ActionConfig = { id: string; label: string; emoji: string; variant: 'primary' | 'danger' | 'neutral' };
 
 const ACTIONS: ActionConfig[] = [
-  { id: 'yes',    label: 'Yes',    emoji: 'âœ…', variant: 'primary'  },
-  { id: 'no',     label: 'No',     emoji: 'âŒ', variant: 'danger'   },
-  { id: 'help',   label: 'Help',   emoji: 'ðŸ†˜', variant: 'primary'  },
-  { id: 'next',   label: 'Next',   emoji: 'âž¡ï¸', variant: 'neutral'  },
-  { id: 'back',   label: 'Back',   emoji: 'â¬…ï¸', variant: 'neutral'  },
-  { id: 'repeat', label: 'Repeat', emoji: 'ðŸ”', variant: 'neutral'  },
-  { id: 'done',   label: 'Done',   emoji: 'âœ”ï¸', variant: 'primary'  },
+  { id: 'yes',    label: 'Yes',    emoji: '✅', variant: 'primary'  },
+  { id: 'no',     label: 'No',     emoji: '❌', variant: 'danger'   },
+  { id: 'help',   label: 'Help',   emoji: '🆘', variant: 'primary'  },
+  { id: 'next',   label: 'Next',   emoji: '➡️', variant: 'neutral'  },
+  { id: 'back',   label: 'Back',   emoji: '⬅️', variant: 'neutral'  },
+  { id: 'repeat', label: 'Repeat', emoji: '🔄', variant: 'neutral'  },
+  { id: 'done',   label: 'Done',   emoji: '✔️', variant: 'primary'  },
 ];
 
-// â”€â”€ Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Settings ───────────────────────────────────────────────────────────────
 
-type SettingKey = 'largeButtons' | 'extraLargeButtons' | 'slowSelection' | 'highContrast';
+type SettingKey = keyof AccessibilitySettings;
 
-const SETTINGS: { key: SettingKey; label: string; description: string }[] = [
-  { key: 'largeButtons',      label: 'Large Buttons',         description: 'Increases button size for easier tapping' },
-  { key: 'extraLargeButtons', label: 'Extra Large Buttons',   description: 'Maximum button size for motor accessibility' },
-  { key: 'slowSelection',     label: 'Slow Selection',        description: 'Adds a delay before a selection registers' },
-  { key: 'highContrast',      label: 'High Contrast',         description: 'Maximum contrast for low-vision users' },
+const SETTINGS: { key: SettingKey; label: string; description: string; emoji: string }[] = [
+  { key: 'largeTouchTargets', emoji: '📐', label: 'Large Touch Targets', description: 'Increases button size for easier tapping' },
+  { key: 'dwellClick',        emoji: '⏱️', label: 'Dwell Selection (Tremor Tolerant)', description: 'Auto-selects button after holding pointer over it for 1.5 seconds' },
+  { key: 'switchScanning',    emoji: '🔘', label: 'Switch Scanning Mode', description: 'Auto-cycles highlight sequentially; press Space / Enter or Switch Trigger to select' },
+  { key: 'highContrast',      emoji: '👁️', label: 'High Contrast Mode', description: 'Maximum contrast for low-vision users' },
 ];
 
-// â”€â”€ Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Screen ──────────────────────────────────────────────────────────────────
 
 export default function AssistedTouchPage() {
+  const { announce } = useAudioNav();
+  const { session, updateAccessibility } = useSession();
   const [lastPressed, setLastPressed] = useState<string | null>(null);
-  const [settings, setSettings] = useState<Record<SettingKey, boolean>>({
-    largeButtons:      true,
-    extraLargeButtons: false,
-    slowSelection:     false,
-    highContrast:      false,
-  });
 
-  const btnSize = settings.extraLargeButtons ? 140 : settings.largeButtons ? 110 : 90;
+  const settings = session.accessibility;
+
+  // Dwell state
+  const [dwellActiveId, setDwellActiveId] = useState<string | null>(null);
+  const [dwellProgress, setDwellProgress] = useState<number>(0);
+  const dwellTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dwellIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Switch Scanning state
+  const [scanIndex, setScanIndex] = useState<number>(0);
+  const [scanPulseAnim] = useState(() => new Animated.Value(1));
+
+  const btnSize = settings.largeTouchTargets ? 120 : 90;
 
   function toggleSetting(key: SettingKey) {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+    if (key === 'switchScanning') {
+      setScanIndex(0);
+    }
+    if (key === 'dwellClick') {
+      clearDwellTimer();
+    }
+    updateAccessibility(key);
   }
+
+  function handleSelectAction(label: string) {
+    setLastPressed(label);
+    announce(`Selected ${label}`);
+    clearDwellTimer();
+  }
+
+  // ── Dwell Timer Handlers ──────────────────────────────────────────────────
+  function clearDwellTimer() {
+    if (dwellTimerRef.current) clearTimeout(dwellTimerRef.current);
+    if (dwellIntervalRef.current) clearInterval(dwellIntervalRef.current);
+    dwellTimerRef.current = null;
+    dwellIntervalRef.current = null;
+    setDwellActiveId(null);
+    setDwellProgress(0);
+  }
+
+  function handlePointerEnter(action: ActionConfig) {
+    if (!settings.dwellClick) return;
+    clearDwellTimer();
+
+    setDwellActiveId(action.id);
+    setDwellProgress(0);
+
+    const DWELL_DURATION = 1500;
+    const INTERVAL_MS = 50;
+    let elapsed = 0;
+
+    dwellIntervalRef.current = setInterval(() => {
+      elapsed += INTERVAL_MS;
+      const progress = Math.min(100, (elapsed / DWELL_DURATION) * 100);
+      setDwellProgress(progress);
+    }, INTERVAL_MS);
+
+    dwellTimerRef.current = setTimeout(() => {
+      handleSelectAction(action.label);
+    }, DWELL_DURATION);
+  }
+
+  function handlePointerLeave() {
+    if (settings.dwellClick) {
+      clearDwellTimer();
+    }
+  }
+
+  // ── Switch Scanning Loop ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!settings.switchScanning) return;
+
+    const interval = setInterval(() => {
+      setScanIndex((prev) => (prev + 1) % ACTIONS.length);
+    }, 1600);
+
+    return () => clearInterval(interval);
+  }, [settings.switchScanning]);
+
+  // Pulse animation for switch scan highlight
+  useEffect(() => {
+    if (!settings.switchScanning) return;
+
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanPulseAnim, { toValue: 1.06, duration: 400, useNativeDriver: true }),
+        Animated.timing(scanPulseAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+
+    return () => pulse.stop();
+  }, [settings.switchScanning, scanIndex, scanPulseAnim]);
+
+  // Global Keyboard Listener for Switch Scanning (Space / Enter / Number keys)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !settings.switchScanning) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        const activeAction = ACTIONS[scanIndex];
+        if (activeAction) {
+          handleSelectAction(activeAction.label);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.switchScanning, scanIndex]);
+
+  // Clean up dwell on unmount
+  useEffect(() => {
+    return () => clearDwellTimer();
+  }, []);
 
   const VARIANT_STYLES: Record<ActionConfig['variant'], object> = {
     primary: {
@@ -91,81 +204,133 @@ export default function AssistedTouchPage() {
     >
       <View style={styles.screen}>
         <AccessHeader />
-        <PageHeader title="Easy Interaction" backLabel="Back to modes" backRoute="/" />
+        <PageHeader title="Easy Interaction (Motor Accessibility)" backLabel="Back to modes" backRoute="/" />
 
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* â”€â”€ Last action feedback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* ── Switch Scanning Trigger Banner (if Switch Scanning ON) ───── */}
+          {settings.switchScanning && (
+            <Pressable
+              style={({ pressed }: any) => [
+                styles.switchTriggerBtn,
+                pressed && styles.switchTriggerBtnPressed,
+              ]}
+              onPress={() => handleSelectAction(ACTIONS[scanIndex].label)}
+              accessibilityRole="button"
+              accessibilityLabel={`Switch Trigger: Select ${ACTIONS[scanIndex].label}`}
+            >
+              <Text style={styles.switchTriggerEmoji}>🔴</Text>
+              <Text style={styles.switchTriggerText}>
+                SWITCH TRIGGER — TAP OR PRESS SPACE TO SELECT ({ACTIONS[scanIndex].label.toUpperCase()})
+              </Text>
+            </Pressable>
+          )}
+
+          {/* ── Last action feedback ─────────────────────────────────────── */}
           {lastPressed && (
             <View style={styles.feedbackBar} accessibilityLiveRegion="polite">
-              <Text style={styles.feedbackText}>âœ… Selected: {lastPressed}</Text>
+              <Text style={styles.feedbackText}>✅ Selected: {lastPressed}</Text>
             </View>
           )}
 
-          {/* â”€â”€ Large action buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* ── Large action buttons ─────────────────────────────────────── */}
           <View
             style={styles.buttonSection}
             accessibilityRole="none"
             accessibilityLabel="Interaction options"
           >
-            {ACTIONS.map((action) => {
+            {ACTIONS.map((action, index) => {
               const isNeutral = action.variant === 'neutral';
+              const isScanHighlighted = settings.switchScanning && scanIndex === index;
+              const isDwellActive = dwellActiveId === action.id;
+
+              const AnimatedView = isScanHighlighted ? Animated.View : View;
+
               return (
-                <Pressable
+                <AnimatedView
                   key={action.id}
-                  style={({ pressed }: any) => [
-                    styles.bigBtn,
-                    {
-                      width: btnSize,
-                      height: btnSize,
-                      ...VARIANT_STYLES[action.variant],
-                    },
-                    pressed && styles.bigBtnPressed,
-                  ]}
-                  onPress={() => setLastPressed(action.label)}
-                  accessibilityRole="button"
-                  accessibilityLabel={action.label}
-                  testID={`easy-tap-${action.id}`}
+                  style={isScanHighlighted ? { transform: [{ scale: scanPulseAnim }] } : undefined}
                 >
-                  <Text style={styles.bigBtnEmoji}>{action.emoji}</Text>
-                  <Text
-                    style={[
-                      styles.bigBtnLabel,
-                      isNeutral && !settings.highContrast && styles.bigBtnLabelDark,
-                      settings.highContrast && styles.bigBtnLabelHC,
+                  <Pressable
+                    style={({ pressed }: any) => [
+                      styles.bigBtn,
+                      {
+                        width: btnSize,
+                        height: btnSize,
+                        ...VARIANT_STYLES[action.variant],
+                      },
+                      pressed && styles.bigBtnPressed,
+                      isScanHighlighted && styles.bigBtnScanHighlighted,
+                      isDwellActive && styles.bigBtnDwellActive,
                     ]}
+                    onPress={() => handleSelectAction(action.label)}
+                    onPointerEnter={() => handlePointerEnter(action)}
+                    onPointerLeave={handlePointerLeave}
+                    accessibilityRole="button"
+                    accessibilityLabel={action.label}
+                    testID={`easy-tap-${action.id}`}
                   >
-                    {action.label}
-                  </Text>
-                </Pressable>
+                    {/* Dwell progress fill bar */}
+                    {isDwellActive && (
+                      <View style={[styles.dwellProgressBar, { width: `${dwellProgress}%` }]} />
+                    )}
+
+                    {/* Switch Scan Badge */}
+                    {isScanHighlighted && (
+                      <View style={styles.scanBadge}>
+                        <Text style={styles.scanBadgeText}>TARGET</Text>
+                      </View>
+                    )}
+
+                    <Text style={styles.bigBtnEmoji}>{action.emoji}</Text>
+                    <Text
+                      style={[
+                        styles.bigBtnLabel,
+                        isNeutral && !settings.highContrast && styles.bigBtnLabelDark,
+                        settings.highContrast && styles.bigBtnLabelHC,
+                      ]}
+                    >
+                      {action.label}
+                    </Text>
+
+                    {/* Dwell Timer Indicator text */}
+                    {isDwellActive && (
+                      <Text style={styles.dwellText}>{Math.round(dwellProgress)}%</Text>
+                    )}
+                  </Pressable>
+                </AnimatedView>
               );
             })}
           </View>
 
-          {/* â”€â”€ Explanation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* ── Explanation ────────────────────────────────────────────── */}
           <View style={styles.explainCard}>
+            <Text style={styles.explainTitle}>Motor Accessibility Controls</Text>
             <Text style={styles.explainText}>
-              Designed for users who may have difficulty with precise touch or sustained motor control.
+              Designed for users with motor tremors or limited dexterity. Enable <Text style={{ fontWeight: 'bold' }}>Dwell Selection</Text> to select by holding your pointer, or <Text style={{ fontWeight: 'bold' }}>Switch Scanning</Text> to cycle options and trigger with any single press or key.
             </Text>
           </View>
 
-          {/* â”€â”€ Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* ── Settings Toggles ────────────────────────────────────────── */}
           <View style={styles.settingsSection}>
             <Text style={styles.settingsHeading}>Interaction Settings</Text>
             {SETTINGS.map((setting) => (
               <View key={setting.key} style={styles.settingRow}>
                 <View style={styles.settingInfo}>
-                  <Text style={styles.settingLabel}>{setting.label}</Text>
+                  <View style={styles.settingLabelRow}>
+                    <Text style={styles.settingEmoji}>{setting.emoji}</Text>
+                    <Text style={styles.settingLabel}>{setting.label}</Text>
+                  </View>
                   <Text style={styles.settingDesc}>{setting.description}</Text>
                 </View>
                 <Switch
                   value={settings[setting.key]}
                   onValueChange={() => toggleSetting(setting.key)}
                   thumbColor={settings[setting.key] ? AccessColors.teal : AccessColors.textTertiary}
-                  trackColor={{ false: AccessColors.border, true: AccessColors.tealBorder + '60' }}
+                  trackColor={{ false: AccessColors.border, true: AccessColors.tealBorder + '80' }}
                   accessibilityLabel={setting.label}
                   accessibilityRole="switch"
                 />
@@ -178,7 +343,7 @@ export default function AssistedTouchPage() {
   );
 }
 
-// â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Styles ────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: AccessColors.background },
@@ -189,13 +354,44 @@ const styles = StyleSheet.create({
     padding: AccessSpacing.xl,
     gap: AccessSpacing.xl,
     alignItems: 'center',
+    maxWidth: 960,
+    alignSelf: 'center',
+    width: '100%',
+  },
+
+  // Switch Trigger
+  switchTriggerBtn: {
+    width: '100%',
+    backgroundColor: '#FFD700',
+    borderWidth: 3,
+    borderColor: '#B8860B',
+    borderRadius: AccessRadius.md,
+    paddingVertical: AccessSpacing.md,
+    paddingHorizontal: AccessSpacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: AccessSpacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  switchTriggerBtnPressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
+  switchTriggerEmoji: { fontSize: 24 },
+  switchTriggerText: {
+    fontSize: AccessFontSize.base,
+    fontWeight: AccessFontWeight.bold,
+    color: '#332200',
+    textAlign: 'center',
   },
 
   // Feedback
   feedbackBar: {
     alignSelf: 'stretch',
     backgroundColor: AccessColors.statusGreenBg,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: AccessColors.statusGreen,
     borderRadius: AccessRadius.sm,
     padding: AccessSpacing.md,
@@ -219,21 +415,58 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: AccessSpacing.sm,
+    gap: AccessSpacing.xs,
+    position: 'relative',
+    overflow: 'hidden',
     ...Platform.select({ web: { outlineStyle: 'none' }, default: {} }),
   },
   bigBtnPressed: { opacity: 0.75, transform: [{ scale: 0.96 }] },
-  bigBtnFocused: {
-    ...Platform.select({
-      web: { outlineWidth: 4, outlineColor: AccessColors.focusRing, outlineStyle: 'solid', outlineOffset: 3 },
-      default: {},
-    }),
-  } as any,
+  bigBtnScanHighlighted: {
+    borderWidth: 4,
+    borderColor: '#FFD700',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  bigBtnDwellActive: {
+    borderColor: AccessColors.teal,
+  },
+  dwellProgressBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    top: 0,
+    backgroundColor: 'rgba(13, 148, 136, 0.35)',
+  },
+  dwellText: {
+    position: 'absolute',
+    bottom: 4,
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: AccessColors.teal,
+  },
+  scanBadge: {
+    position: 'absolute',
+    top: 4,
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  scanBadgeText: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#332200',
+  },
+
   bigBtnEmoji: { fontSize: 32 },
   bigBtnLabel: {
     fontSize: AccessFontSize.md,
     fontWeight: AccessFontWeight.bold,
     color: AccessColors.textOnDark,
+    textAlign: 'center',
   },
   bigBtnLabelDark: { color: AccessColors.textPrimary },
   bigBtnLabelHC: { color: '#FFFFFF' },
@@ -246,12 +479,17 @@ const styles = StyleSheet.create({
     borderColor: AccessColors.borderLight,
     borderRadius: AccessRadius.md,
     padding: AccessSpacing.xl,
+    gap: AccessSpacing.xs,
+  },
+  explainTitle: {
+    fontSize: AccessFontSize.md,
+    fontWeight: AccessFontWeight.bold,
+    color: AccessColors.textPrimary,
   },
   explainText: {
     fontSize: AccessFontSize.base,
     color: AccessColors.textSecondary,
     lineHeight: 24,
-    textAlign: 'center',
   },
 
   // Settings
@@ -277,6 +515,8 @@ const styles = StyleSheet.create({
     gap: AccessSpacing.md,
   },
   settingInfo: { flex: 1, gap: 2 },
+  settingLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  settingEmoji: { fontSize: 18 },
   settingLabel: {
     fontSize: AccessFontSize.base,
     fontWeight: AccessFontWeight.medium,
@@ -288,5 +528,3 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
-
-

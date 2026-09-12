@@ -16,7 +16,7 @@
  *   pressed  — scale 0.97
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -81,8 +81,8 @@ export function ModeCard({
   shortcutNumber,
 }: ModeCardProps) {
   const [hovered, setHovered] = useState(false);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const checkAnim = useRef(new Animated.Value(0)).current;
+  const [scaleAnim] = useState(() => new Animated.Value(1));
+  const [checkAnim] = useState(() => new Animated.Value(0));
 
   const accent = getAccent(iconName);
 

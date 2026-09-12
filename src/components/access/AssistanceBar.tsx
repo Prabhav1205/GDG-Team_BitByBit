@@ -6,7 +6,7 @@
  *   — wide (≥600): full horizontal layout
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -37,7 +37,7 @@ export function AssistanceBar() {
   const [staffRequested, setStaffRequested] = useState(false);
   const [staffHovered, setStaffHovered] = useState(false);
   const [benefitsHovered, setBenefitsHovered] = useState(false);
-  const staffScaleAnim = useRef(new Animated.Value(1)).current;
+  const [staffScaleAnim] = useState(() => new Animated.Value(1));
 
   function handleRequestStaff() {
     if (staffRequested) return;

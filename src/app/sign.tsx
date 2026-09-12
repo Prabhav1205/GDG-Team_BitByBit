@@ -1,24 +1,10 @@
 /**
- * /sign — Sign Language communication module (placeholder).
+ * /sign — Sign Language communication module.
  *
- * Plug-in point for the Sign Language interaction system.
- * The session state (communicationMode: 'sign') is already set
- * by the ModeSelector before navigation.
+ * Implements the ISL recognition pipeline:
+ *   Camera → MediaPipe Hand Landmarks → FastAPI Backend → Gesture Recognition → UI + TTS
  */
 
-<<<<<<< Updated upstream
-import React from 'react';
-import { ModePage } from '@/components/access/ModePage';
-
-export default function SignLanguagePage() {
-  return (
-    <ModePage
-      mode="sign"
-      iconName="sign"
-      title="Sign Language"
-      subtitle="Communicate using sign language. A sign language interpreter or recognition system will be available here."
-    />
-=======
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -623,33 +609,20 @@ export default function SignLanguagePage() {
   const lastRecognizedGesture = useRef<string | null>(null);
   const lastSpokenTime = useRef<number>(0);
 
-<<<<<<< Updated upstream
-  // Handle recognized gesture (called from both web and mobile paths)
-  function handleRecognizedGesture(gestureId: string, conf: number) {
-    const gObj = ISL_GESTURES.find((g) => g.id === gestureId);
-    const phrase = gObj ? gObj.phrase : gestureId;
-    setActiveGesture(gestureId);
-=======
   // Confirms a stabilized gesture, updates UI, and triggers speech & kiosk broadcast (once per gesture)
   function confirmRecognizedGesture(gestureId: string, conf: number) {
     const cleanId = gestureId.replace(/\s*(△|\(offline\)).*$/i, '').trim();
     const gObj = ISL_GESTURES.find((g) => g.id === cleanId || g.id === gestureId);
-    const phrase = gObj ? (gObj.localPhrase[lang] ?? gObj.localPhrase.en) : cleanId;
+    const phrase = gObj ? gObj.phrase : cleanId;
     setActiveGesture(cleanId);
->>>>>>> Stashed changes
     setRecognizedText(phrase);
     setConfidence(conf);
     setStatus('recognized');
     setStabilizingGesture(null);
 
     const now = Date.now();
-<<<<<<< Updated upstream
-    if (gestureId !== lastRecognizedGesture.current || now - lastSpokenTime.current > 4000) {
-      lastRecognizedGesture.current = gestureId;
-=======
     if (cleanId !== lastRecognizedGesture.current || now - lastSpokenTime.current > 3500) {
       lastRecognizedGesture.current = cleanId;
->>>>>>> Stashed changes
       lastSpokenTime.current = now;
       speechEngine.speak(phrase, { lang: session.language });
       broadcastTranslation(phrase, 'Sign Language', conf);
@@ -818,19 +791,12 @@ export default function SignLanguagePage() {
 
   const statusText =
     status === 'recognized'
-<<<<<<< Updated upstream
-      ? `✅ ISL Gesture Recognized: ${activeGesture} ${confidence ? `(${(confidence * 100).toFixed(0)}% confidence)` : ''}`
-      : cameraActive
-      ? '🎥 Live Camera active — scanning hand landmarks...'
-      : '⏳ Camera paused. Tap Start Camera Feed or select a gesture.';
-=======
       ? `✅ ISL Sign Confirmed: ${activeGesture} ${confidence ? `(${(confidence * 100).toFixed(0)}% confidence)` : ''}`
       : stabilizingGesture
         ? `⏳ Stabilizing sign: ${stabilizingGesture}... (hold steady)`
         : cameraActive
-          ? (lang === 'hi' ? '🎥 लाइव कैमरा सक्रिय — हाथ के निशान स्कैन हो रहे हैं...' : lang === 'mr' ? '🎥 लाइव कॅमेरा सक्रिय — हाताचे ठिपके स्कॅन होत आहेत...' : '🎥 Live Camera active — scanning hand landmarks...')
-          : (lang === 'hi' ? '⏳ कैमरा रुका हुआ है। कैमरा शुरू करें या इशारा चुनें।' : lang === 'mr' ? '⏳ कॅमेरा थांबला आहे. कॅमेरा सुरू करा किंवा खूण निवडा.' : '⏳ Camera paused. Tap Start Camera Feed or select a gesture.');
->>>>>>> Stashed changes
+          ? '🎥 Live Camera active — scanning hand landmarks...'
+          : '⏳ Camera paused. Tap Start Camera Feed or select a gesture.';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -922,15 +888,7 @@ export default function SignLanguagePage() {
                     onMessage={(event) => {
                       try {
                         const msg = JSON.parse(event.nativeEvent.data);
-<<<<<<< Updated upstream
-                        // Mobile path: WebView already called API directly,
-                        // result arrives as { type: 'gesture', gesture, confidence }
-                        if (msg.type === 'gesture' && msg.gesture) {
-                          handleRecognizedGesture(msg.gesture, msg.confidence || 0.65);
-                        }
-                        // Legacy landmark path (fallback)
-                        if (msg.type === 'landmarks' && msg.landmarks) {
-=======
+                        // FRAME_PREDICTION: WebView called /predict, result forwarded here
                         if (msg.type === 'FRAME_PREDICTION') {
                           processPredictionFrame({
                             gesture: msg.gesture,
@@ -941,13 +899,13 @@ export default function SignLanguagePage() {
                         } else if (msg.type === 'NO_HAND') {
                           handleNoHand();
                         } else if (msg.type?.toUpperCase() === 'GESTURE' && msg.gesture) {
+                          // Legacy/fallback gesture message
                           processPredictionFrame({
                             gesture: msg.gesture,
                             confidence: msg.confidence || 0.70,
                             accepted: true,
                           });
                         } else if (msg.type?.toUpperCase() === 'LANDMARKS' && msg.landmarks) {
->>>>>>> Stashed changes
                           sendLandmarksToAPI(msg.landmarks);
                         }
                       } catch (err) {
@@ -1090,6 +1048,5 @@ export default function SignLanguagePage() {
         </ScrollView>
       </View>
     </SafeAreaView>
->>>>>>> Stashed changes
   );
 }

@@ -26,12 +26,9 @@ class GesturePredictor:
         self,
         model_path: Union[str, Path],
         gestures_config_path: Union[str, Path],
-<<<<<<< Updated upstream
-        confidence_threshold: float = 0.35,
-=======
         confidence_threshold: float = 0.65,
         top_margin: float = 0.15,
->>>>>>> Stashed changes
+
         metadata_path: Optional[Union[str, Path]] = None,
     ) -> None:
         """Initializes the predictor with model weights and configuration.

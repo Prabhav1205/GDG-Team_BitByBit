@@ -1,15 +1,10 @@
 /**
- * /text — Text communication module (placeholder).
+ * /text — Type-to-Speak Module (Speech-Impaired Kiosk Interface)
  *
- * Plug-in point for the text input and output system.
- * The session state (communicationMode: 'text') is already set
- * by the ModeSelector before navigation.
+ * Enables speech-impaired users to type custom messages or tap
+ * JSON-configured quick phrases for real-time Text-to-Speech playback.
  */
 
-<<<<<<< Updated upstream
-import React from 'react';
-import { ModePage } from '@/components/access/ModePage';
-=======
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -30,6 +25,8 @@ import { useSession } from '@/context/SessionContext';
 import { useAudioNav } from '@/context/AudioNavContext';
 import { useSchemeSearch } from '@/hooks/use-scheme-search';
 import { SchemeResultsPanel } from '@/components/access/SchemeResultsPanel';
+import { useAccessTheme } from '@/context/AccessThemeContext';
+import { UI_STRINGS, LANGUAGES, toSafeLangCode } from '@/constants/i18n';
 import {
   AccessColors,
   AccessSpacing,
@@ -39,10 +36,15 @@ import {
 } from '@/constants/access-theme';
 
 export default function TextToSpeakScreen() {
+  const styles = useStyles();
   const { session, clearSession, broadcastTranslation } = useSession();
   const { announce } = useAudioNav();
 
-  const institutions = PhraseService.getInstitutions();
+  const lang = toSafeLangCode(session.language);
+  const speechCode = LANGUAGES[lang].speechCode;
+  const t = UI_STRINGS[lang];
+
+  const institutions = PhraseService.getInstitutions(lang);
   const [selectedInstId, setSelectedInstId] = useState<string>(
     session.institution || 'bank'
   );
@@ -53,17 +55,15 @@ export default function TextToSpeakScreen() {
   const schemeSearch = useSchemeSearch();
 
   const currentInstitution: InstitutionConfig =
-    PhraseService.getInstitutionById(selectedInstId || 'bank');
+    PhraseService.getInstitutionById(selectedInstId || 'bank', lang);
 
   useEffect(() => {
-    announce(
-      'Type-to-speak module loaded. Type a message or select quick phrases below.'
-    );
-  }, [announce]);
+    announce(t.textSubtitle);
+  }, [announce, t.textSubtitle]);
 
   function handleBack() {
     speechEngine.stopSpeaking();
-    announce('Returning to main menu');
+    announce(t.backToMain);
     clearSession();
     router.replace('/');
   }
@@ -84,6 +84,7 @@ export default function TextToSpeakScreen() {
 
     speechEngine.speak(trimmed, {
       rate: speechRate,
+      lang: speechCode,
       onEnd: () => setIsSpeaking(false),
       onError: () => setIsSpeaking(false),
     });
@@ -93,18 +94,8 @@ export default function TextToSpeakScreen() {
     setInputText(phrase);
     handleSpeak(phrase);
   }
->>>>>>> Stashed changes
 
-export default function TextPage() {
   return (
-<<<<<<< Updated upstream
-    <ModePage
-      mode="text"
-      iconName="text"
-      title="Text"
-      subtitle="Type what you need to communicate. Your messages will be displayed clearly for the staff member to read."
-    />
-=======
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <View style={styles.screen}>
         {/* Header */}
@@ -120,11 +111,11 @@ export default function TextPage() {
               focused && styles.backBtnFocused,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Back to communication options"
+            accessibilityLabel={t.backToOptions}
             testID="back-to-home"
           >
             <KioskIcon name="back" size={16} color={AccessColors.navy} />
-            <Text style={styles.backBtnLabel}>Back to communication options</Text>
+            <Text style={styles.backBtnLabel}>{t.backToOptions}</Text>
           </Pressable>
         </View>
 
@@ -141,10 +132,10 @@ export default function TextPage() {
               <KioskIcon name="text" size={44} color={AccessColors.teal} />
             </View>
             <Text style={styles.title} role="heading" aria-level={1}>
-              Type to Speak
+              {t.textTitle}
             </Text>
             <Text style={styles.subtitle}>
-              Type your message below or choose pre-set quick phrases to synthesize voice output.
+              {t.textSubtitle}
             </Text>
           </View>
 
@@ -153,7 +144,7 @@ export default function TextPage() {
             <View style={styles.inputRow}>
               <TextInput
                 style={styles.textInput}
-                placeholder="Type what you want to say..."
+                placeholder={t.textPlaceholder}
                 placeholderTextColor={AccessColors.textTertiary}
                 value={inputText}
                 onChangeText={setInputText}
@@ -167,9 +158,9 @@ export default function TextPage() {
                   onPress={() => setInputText('')}
                   style={styles.clearInputBtn}
                   accessibilityRole="button"
-                  accessibilityLabel="Clear typed message"
+                  accessibilityLabel={t.clearText}
                 >
-                  <Text style={styles.clearInputText}>Clear</Text>
+                  <Text style={styles.clearInputText}>{t.clearText}</Text>
                 </Pressable>
               )}
             </View>
@@ -177,7 +168,7 @@ export default function TextPage() {
             {/* Controls Bar: Rate Selector + Speak Button */}
             <View style={styles.controlsRow}>
               <View style={styles.rateSelector}>
-                <Text style={styles.rateLabel}>Speed:</Text>
+                <Text style={styles.rateLabel}>{t.speedLabel}</Text>
                 <Pressable
                   onPress={() => setSpeechRate(1.0)}
                   style={[
@@ -185,7 +176,7 @@ export default function TextPage() {
                     speechRate === 1.0 && styles.rateChipActive,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Normal speech speed"
+                  accessibilityLabel={t.speedNormal}
                 >
                   <Text
                     style={[
@@ -193,7 +184,7 @@ export default function TextPage() {
                       speechRate === 1.0 && styles.rateChipTextActive,
                     ]}
                   >
-                    1.0x Normal
+                    {t.speedNormal}
                   </Text>
                 </Pressable>
 
@@ -204,7 +195,7 @@ export default function TextPage() {
                     speechRate === 0.8 && styles.rateChipActive,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Slow speech speed"
+                  accessibilityLabel={t.speedSlow}
                 >
                   <Text
                     style={[
@@ -212,7 +203,7 @@ export default function TextPage() {
                       speechRate === 0.8 && styles.rateChipTextActive,
                     ]}
                   >
-                    0.8x Slow
+                    {t.speedSlow}
                   </Text>
                 </Pressable>
               </View>
@@ -227,7 +218,7 @@ export default function TextPage() {
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={
-                  isSpeaking ? 'Speaking message now' : 'Speak typed message aloud'
+                  isSpeaking ? t.speakingNow : t.speakMessage
                 }
                 testID="speak-button"
               >
@@ -246,26 +237,39 @@ export default function TextPage() {
                     (!inputText.trim() || isSpeaking) && styles.speakBtnLabelDisabled,
                   ]}
                 >
-                  {isSpeaking ? 'Speaking...' : 'Speak Message'}
+                  {isSpeaking ? t.speakingNow : t.speakMessage}
                 </Text>
               </Pressable>
               <Pressable
                 onPress={() => schemeSearch.search(inputText)}
                 disabled={!inputText.trim() || schemeSearch.loading}
-                style={({ pressed }) => [styles.speakBtn, (!inputText.trim() || schemeSearch.loading) && styles.speakBtnDisabled, pressed && styles.speakBtnPressed]}
+                style={({ pressed }) => [
+                  styles.speakBtn,
+                  { backgroundColor: AccessColors.tealDark },
+                  (!inputText.trim() || schemeSearch.loading) && styles.speakBtnDisabled,
+                  pressed && styles.speakBtnPressed,
+                ]}
                 accessibilityRole="button"
                 accessibilityLabel="Find relevant government schemes"
+                testID="find-schemes-button"
               >
-                <Text style={styles.speakBtnLabel}>{schemeSearch.loading ? 'Searching…' : 'Find Schemes'}</Text>
+                <Text style={styles.speakBtnLabel}>
+                  {schemeSearch.loading ? 'Searching…' : '🔍 Find Schemes'}
+                </Text>
               </Pressable>
             </View>
           </View>
-          <SchemeResultsPanel results={schemeSearch.results} loading={schemeSearch.loading} error={schemeSearch.error} />
+
+          <SchemeResultsPanel
+            results={schemeSearch.results}
+            loading={schemeSearch.loading}
+            error={schemeSearch.error}
+          />
 
           {/* Recent History Section */}
           {recentPhrases.length > 0 && (
             <View style={styles.historyContainer}>
-              <Text style={styles.sectionHeading}>Recently Spoken Phrases:</Text>
+              <Text style={styles.sectionHeading}>{t.recentPhrases}</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -290,7 +294,7 @@ export default function TextPage() {
 
           {/* Institution Quick Phrase Selector Section */}
           <View style={styles.quickPhrasesSection}>
-            <Text style={styles.sectionHeading}>Select Institution Category:</Text>
+            <Text style={styles.sectionHeading}>{t.selectCategory}:</Text>
 
             {/* Institution Tabs */}
             <View style={styles.tabsRow} role="tablist">
@@ -355,6 +359,286 @@ export default function TextPage() {
         </ScrollView>
       </View>
     </SafeAreaView>
->>>>>>> Stashed changes
   );
+}
+
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: AccessColors.background,
+  },
+  screen: {
+    flex: 1,
+  },
+  navBar: {
+    paddingHorizontal: AccessSpacing.xl,
+    paddingVertical: AccessSpacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: AccessColors.borderLight,
+    backgroundColor: AccessColors.cardDefault,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: AccessSpacing.xs,
+    alignSelf: 'flex-start',
+    paddingVertical: AccessSpacing.xs,
+    paddingHorizontal: AccessSpacing.sm,
+    borderRadius: AccessRadius.sm,
+  },
+  backBtnPressed: {
+    opacity: 0.7,
+  },
+  backBtnFocused: {
+    outlineWidth: 2,
+    outlineColor: AccessColors.teal,
+    outlineStyle: 'solid',
+  } as any,
+  backBtnLabel: {
+    fontSize: AccessFontSize.sm,
+    fontFamily: AccessFontFamily.medium,
+    color: AccessColors.navy,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: AccessSpacing.xl,
+    maxWidth: 900,
+    width: '100%',
+    alignSelf: 'center',
+    gap: AccessSpacing.xl,
+    paddingBottom: AccessSpacing.xxl * 2,
+  },
+  headerBlock: {
+    alignItems: 'center',
+    gap: AccessSpacing.xs,
+    paddingVertical: AccessSpacing.md,
+  },
+  iconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: AccessRadius.full,
+    backgroundColor: AccessColors.tealLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: AccessSpacing.xs,
+  },
+  title: {
+    fontSize: AccessFontSize.xl,
+    fontFamily: AccessFontFamily.bold,
+    color: AccessColors.navy,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: AccessFontSize.base,
+    fontFamily: AccessFontFamily.regular,
+    color: AccessColors.textSecondary,
+    textAlign: 'center',
+    maxWidth: 600,
+  },
+  inputCard: {
+    backgroundColor: AccessColors.cardDefault,
+    borderWidth: 1,
+    borderColor: AccessColors.border,
+    borderRadius: AccessRadius.md,
+    padding: AccessSpacing.lg,
+    gap: AccessSpacing.md,
+    ...AccessShadow.sm,
+  },
+  inputRow: {
+    position: 'relative',
+  },
+  textInput: {
+    backgroundColor: AccessColors.background,
+    borderWidth: 1.5,
+    borderColor: AccessColors.border,
+    borderRadius: AccessRadius.sm,
+    padding: AccessSpacing.md,
+    fontSize: AccessFontSize.base,
+    fontFamily: AccessFontFamily.regular,
+    color: AccessColors.textPrimary,
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+  clearInputBtn: {
+    position: 'absolute',
+    top: AccessSpacing.sm,
+    right: AccessSpacing.sm,
+    backgroundColor: AccessColors.borderLight,
+    paddingHorizontal: AccessSpacing.sm,
+    paddingVertical: AccessSpacing.xs,
+    borderRadius: AccessRadius.sm,
+  },
+  clearInputText: {
+    fontSize: AccessFontSize.xs,
+    fontFamily: AccessFontFamily.medium,
+    color: AccessColors.textSecondary,
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: AccessSpacing.md,
+  },
+  rateSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: AccessSpacing.xs,
+  },
+  rateLabel: {
+    fontSize: AccessFontSize.sm,
+    fontFamily: AccessFontFamily.medium,
+    color: AccessColors.textSecondary,
+    marginRight: AccessSpacing.xs,
+  },
+  rateChip: {
+    paddingHorizontal: AccessSpacing.md,
+    paddingVertical: AccessSpacing.xs,
+    borderRadius: AccessRadius.full,
+    borderWidth: 1,
+    borderColor: AccessColors.border,
+    backgroundColor: AccessColors.background,
+  },
+  rateChipActive: {
+    backgroundColor: AccessColors.navy,
+    borderColor: AccessColors.navy,
+  },
+  rateChipText: {
+    fontSize: AccessFontSize.xs,
+    fontFamily: AccessFontFamily.medium,
+    color: AccessColors.textSecondary,
+  },
+  rateChipTextActive: {
+    color: AccessColors.cardDefault,
+    fontFamily: AccessFontFamily.semibold,
+  },
+  speakBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: AccessSpacing.sm,
+    backgroundColor: AccessColors.teal,
+    paddingHorizontal: AccessSpacing.xl,
+    paddingVertical: AccessSpacing.md,
+    borderRadius: AccessRadius.sm,
+  },
+  speakBtnDisabled: {
+    backgroundColor: AccessColors.borderLight,
+    opacity: 0.6,
+  },
+  speakBtnPressed: {
+    backgroundColor: AccessColors.tealDark,
+  },
+  speakBtnLabel: {
+    fontSize: AccessFontSize.base,
+    fontFamily: AccessFontFamily.semibold,
+    color: AccessColors.cardDefault,
+  },
+  speakBtnLabelDisabled: {
+    color: AccessColors.textTertiary,
+  },
+  historyContainer: {
+    gap: AccessSpacing.xs,
+  },
+  sectionHeading: {
+    fontSize: AccessFontSize.sm,
+    fontFamily: AccessFontFamily.semibold,
+    color: AccessColors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    gap: AccessSpacing.xs,
+    paddingVertical: AccessSpacing.xs,
+  },
+  historyChip: {
+    backgroundColor: AccessColors.cardHover,
+    paddingHorizontal: AccessSpacing.md,
+    paddingVertical: AccessSpacing.xs,
+    borderRadius: AccessRadius.full,
+    borderWidth: 1,
+    borderColor: AccessColors.borderLight,
+    maxWidth: 240,
+  },
+  historyChipText: {
+    fontSize: AccessFontSize.xs,
+    fontFamily: AccessFontFamily.regular,
+    color: AccessColors.textPrimary,
+  },
+  quickPhrasesSection: {
+    gap: AccessSpacing.md,
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    gap: AccessSpacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: AccessColors.borderLight,
+    paddingBottom: AccessSpacing.xs,
+    flexWrap: 'wrap',
+  },
+  tabItem: {
+    paddingHorizontal: AccessSpacing.md,
+    paddingVertical: AccessSpacing.sm,
+    borderRadius: AccessRadius.sm,
+  },
+  tabItemActive: {
+    backgroundColor: AccessColors.navy,
+  },
+  tabItemPressed: {
+    opacity: 0.8,
+  },
+  tabText: {
+    fontSize: AccessFontSize.sm,
+    fontFamily: AccessFontFamily.medium,
+    color: AccessColors.textPrimary,
+  },
+  tabTextActive: {
+    color: AccessColors.cardDefault,
+    fontFamily: AccessFontFamily.semibold,
+  },
+  categoriesContainer: {
+    gap: AccessSpacing.lg,
+  },
+  categoryBlock: {
+    gap: AccessSpacing.sm,
+  },
+  categoryTitle: {
+    fontSize: AccessFontSize.base,
+    fontFamily: AccessFontFamily.semibold,
+    color: AccessColors.navy,
+  },
+  phraseGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: AccessSpacing.sm,
+  },
+  phraseCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: AccessSpacing.sm,
+    backgroundColor: AccessColors.cardDefault,
+    borderWidth: 1,
+    borderColor: AccessColors.border,
+    borderRadius: AccessRadius.sm,
+    paddingHorizontal: AccessSpacing.md,
+    paddingVertical: AccessSpacing.md,
+    flexGrow: 1,
+    minWidth: 260,
+  },
+  phraseCardPressed: {
+    backgroundColor: AccessColors.cardHover,
+    borderColor: AccessColors.teal,
+  },
+  phraseText: {
+    fontSize: AccessFontSize.sm,
+    fontFamily: AccessFontFamily.regular,
+    color: AccessColors.textPrimary,
+    flex: 1,
+  },
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
 }

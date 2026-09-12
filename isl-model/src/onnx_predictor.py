@@ -9,6 +9,8 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+import numpy as np
+
 from src.feature_extractor import FEATURE_DIM, extract_features
 
 logger = logging.getLogger(__name__)
@@ -33,18 +35,18 @@ class OnnxGesturePredictor:
     confidence_threshold:
         Minimum confidence to accept a prediction (default 0.65).
     top_margin:
-        Minimum margin between top-1 and top-2 class probabilities (default 0.15).
+        Minimum margin between top-1 and top-2 class probabilities (default 0.10).
     """
 
     def __init__(
         self,
-        onnx_path: Path = DEFAULT_ONNX_PATH,
-        gestures_config_path: Path = DEFAULT_CONFIG_PATH,
-        metadata_path: Path = DEFAULT_METADATA_PATH,
+        onnx_path: Union[str, Path] = DEFAULT_ONNX_PATH,
+        gestures_config_path: Union[str, Path] = DEFAULT_CONFIG_PATH,
+        metadata_path: Union[str, Path] = DEFAULT_METADATA_PATH,
         confidence_threshold: float = 0.65,
-        top_margin: float = 0.15,
+        top_margin: float = 0.10,
     ) -> None:
-        self._onnx_path = onnx_path
+        self._onnx_path = Path(onnx_path)
         self.confidence_threshold = confidence_threshold
         self.top_margin = top_margin
         self._session: Any = None
@@ -56,9 +58,9 @@ class OnnxGesturePredictor:
         self.default_phrase: str = "Gesture not recognized. Please try again."
         self.metadata: Dict[str, Any] = {}
 
-        self._load_config(gestures_config_path)
-        self._load_metadata(metadata_path)
-        self._load_onnx(onnx_path)
+        self._load_config(Path(gestures_config_path))
+        self._load_metadata(Path(metadata_path))
+        self._load_onnx(Path(onnx_path))
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -127,7 +129,7 @@ class OnnxGesturePredictor:
     # ------------------------------------------------------------------
 
     def predict(
-        self, input_data: Union[List[Dict[str, float]], List[float]]
+        self, input_data: Union[List[Dict[str, float]], List[float], Any]
     ) -> Dict[str, Any]:
         """Predict gesture from 21 landmarks or 63-element feature vector.
 
@@ -135,8 +137,6 @@ class OnnxGesturePredictor:
         """
         if not self.is_loaded or self._session is None:
             raise RuntimeError("ONNX model is not loaded.")
-
-        import numpy as np
 
         features = self._extract_features(input_data)
         arr = np.array([features], dtype=np.float32)

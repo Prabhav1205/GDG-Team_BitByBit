@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0",
+  "description": "Institutional Accessibility Kiosk - ISL Gesture Configuration",
+  "unknown_label": "UNKNOWN",
+  "gestures": [
+    {
+      "id": "HELP",
+      "phrase": "I need help.",
+      "category": "assistance",
+      "description": "General call for kiosk assistance or staff support"
+    },
+    {
+      "id": "YES",
+      "phrase": "Yes.",
+      "category": "response",
+      "description": "Affirmative response"
+    },
+    {
+      "id": "NO",
+      "phrase": "No.",
+      "category": "response",
+      "description": "Negative response"
+    },
+    {
+      "id": "FORM",
+      "phrase": "I need help with this form.",
+      "category": "service",
+      "description": "Assistance required with filling out an official or institutional form"
+    },
+    {
+      "id": "MONEY",
+      "phrase": "I have a query regarding cash or payment.",
+      "category": "service",
+      "description": "Payment, fee, or banking inquiry"
+    },
+    {
+      "id": "APPOINTMENT",
+      "phrase": "I would like to check my appointment.",
+      "category": "service",
+      "description": "Checking or booking a scheduled time"
+    },
+    {
+      "id": "ID",
+      "phrase": "Here is my identity document.",
+      "category": "service",
+      "description": "Presenting or inquiry about Aadhaar/Voter ID/Passport/Card"
+    },
+    {
+      "id": "WHERE",
+      "phrase": "Where do I need to go?",
+      "category": "navigation",
+      "description": "Inquiry about room, counter, or department direction"
+    },
+    {
+      "id": "THANK_YOU",
+      "phrase": "Thank you for your help.",
+      "category": "courtesy",
+      "description": "Expression of gratitude"
+    },
+    {
+      "id": "FINISH",
+      "phrase": "I am finished.",
+      "category": "status",
+      "description": "Transaction or interaction complete"
+    },
+    {
+      "id": "UNKNOWN",
+      "phrase": "Gesture not recognized. Please try again.",
+      "category": "fallback",
+      "description": "Unrecognized or transitional hand posture"
+    }
+  ]
+}

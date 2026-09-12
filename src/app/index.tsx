@@ -216,7 +216,7 @@ function InstitutionCard({
 
 export default function HomeScreen() {
   const styles = useStyles();
-  const { AccessColors } = useAccessTheme();
+  const { AccessColors, isDarkMode } = useAccessTheme();
   const { session, setInstitution, setMode } = useSession();
   const ui = UI_STRINGS[session.language] ?? UI_STRINGS.en;
   const institutions = getInstitutions(ui);
@@ -224,6 +224,50 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const isNarrow = width < 600;
   const [badgePulse] = React.useState(() => new Animated.Value(0.95));
+  const [mountAnim] = React.useState(() => new Animated.Value(0));
+  
+  // Fluid background animations (Dark mode)
+  const [bgSpin1] = React.useState(() => new Animated.Value(0));
+  
+  // Golden Rays animations (Light mode)
+  const [ray1] = React.useState(() => new Animated.Value(0.4));
+  const [ray2] = React.useState(() => new Animated.Value(0.6));
+  const [ray3] = React.useState(() => new Animated.Value(0.2));
+  const [ray4] = React.useState(() => new Animated.Value(0.7));
+  const [rayX] = React.useState(() => new Animated.Value(0));
+
+  // Entrance animations
+  useEffect(() => {
+    Animated.timing(mountAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+  }, [mountAnim]);
+
+
+  // Fluid background loops
+  useEffect(() => {
+    Animated.loop(Animated.timing(bgSpin1, { toValue: 1, duration: 25000, useNativeDriver: false })).start();
+  }, [bgSpin1]);
+
+  // Golden Rays loops
+  useEffect(() => {
+    const breathe = (anim: Animated.Value, lo: number, hi: number, dur: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, { toValue: hi, duration: dur,       useNativeDriver: true }),
+          Animated.timing(anim, { toValue: lo, duration: dur * 1.3, useNativeDriver: true }),
+        ])
+      ).start();
+    breathe(ray1, 0.15, 0.7,  7000);
+    breathe(ray2, 0.1,  0.55, 9000);
+    breathe(ray3, 0.2,  0.65, 11000);
+    breathe(ray4, 0.05, 0.5,  8500);
+    Animated.loop(
+      Animated.timing(rayX, { toValue: 1, duration: 20000, useNativeDriver: true })
+    ).start();
+  }, [ray1, ray2, ray3, ray4, rayX]);
 
   // Subtle badge breathing
   useEffect(() => {
@@ -237,6 +281,29 @@ export default function HomeScreen() {
     return () => anim.stop();
   }, [badgePulse]);
 
+  // Interpolations for stagger
+  // Native driver doesn't support backgroundColor, so we set useNativeDriver: false above
+  const bgColorDark = bgSpin1.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: ['#040a14', '#0A192F', '#0D2738', '#081326', '#040a14']
+  });
+  
+  const rayShiftX = rayX.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 30, 0] });
+
+  const heroOpacity = mountAnim.interpolate({ inputRange: [0, 0.4], outputRange: [0, 1], extrapolate: 'clamp' });
+  const heroTranslateY = mountAnim.interpolate({ inputRange: [0, 0.4], outputRange: [25, 0], extrapolate: 'clamp' });
+
+  const instOpacity = mountAnim.interpolate({ inputRange: [0.2, 0.6], outputRange: [0, 1], extrapolate: 'clamp' });
+  const instTranslateY = mountAnim.interpolate({ inputRange: [0.2, 0.6], outputRange: [25, 0], extrapolate: 'clamp' });
+
+  const voiceOpacity = mountAnim.interpolate({ inputRange: [0.4, 0.8], outputRange: [0, 1], extrapolate: 'clamp' });
+  const voiceTranslateY = mountAnim.interpolate({ inputRange: [0.4, 0.8], outputRange: [25, 0], extrapolate: 'clamp' });
+
+  const modesOpacity = mountAnim.interpolate({ inputRange: [0.6, 1], outputRange: [0, 1], extrapolate: 'clamp' });
+  const modesTranslateY = mountAnim.interpolate({ inputRange: [0.6, 1], outputRange: [25, 0], extrapolate: 'clamp' });
+
+
+
   // Clear communication mode when returning to the home screen
   useFocusEffect(
     React.useCallback(() => {
@@ -248,12 +315,121 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <LinearGradient 
-        colors={[AccessColors.background, AccessColors.tealFaint]} 
-        start={{ x: 0, y: 0 }} 
-        end={{ x: 1, y: 1 }} 
-        style={styles.screen}
-      >
+      <View style={styles.screen}>
+        {/* ── Dynamic Background ──────────────────────────────────── */}
+        {isDarkMode ? (
+          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: bgColorDark }]}>
+            {/* Star-field (Dark mode only) */}
+            {[...Array(25)].map((_, i) => (
+              <View key={i} style={{
+                position: 'absolute',
+                width: i % 3 === 0 ? 3 : 2,
+                height: i % 3 === 0 ? 3 : 2,
+                borderRadius: 2,
+                backgroundColor: 'rgba(255,255,255,0.4)',
+                top:  `${5  + (i * 31 % 90)}%`,
+                left: `${8  + (i * 47 % 84)}%`,
+              }} />
+            ))}
+          </Animated.View>
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+            {/* ── LIGHT: Golden Hour God Rays ────────────────────────────── */}
+            {/* Warm ivory-peach-rose base */}
+            <LinearGradient
+              colors={['#FFFBF5', '#FFF7ED', '#FEF3C7', '#FFF1F5']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            {/* Soft warm bloom — sun just off the top-left corner */}
+            <Animated.View style={{
+              position: 'absolute', top: '-15%', left: '-10%',
+              width: 480, height: 480,
+              borderRadius: 240,
+              opacity: ray1,
+            }}>
+              <LinearGradient
+                colors={['rgba(253,186,116,0.55)', 'rgba(252,211,77,0.25)', 'transparent']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={{ width: '100%', height: '100%', borderRadius: 240 }}
+              />
+            </Animated.View>
+            {/* God Ray 1 — wide amber shaft, steep angle */}
+            <Animated.View style={{
+              position: 'absolute', top: '-40%', left: '-8%',
+              width: 110, height: '240%',
+              opacity: ray2,
+              transform: [{ rotate: '28deg' }, { translateX: rayShiftX }],
+            }}>
+              <LinearGradient
+                colors={['transparent', 'rgba(251,191,36,0.22)', 'rgba(252,211,77,0.14)', 'transparent']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ flex: 1 }}
+              />
+            </Animated.View>
+            {/* God Ray 2 — narrow golden shaft */}
+            <Animated.View style={{
+              position: 'absolute', top: '-40%', left: '18%',
+              width: 70, height: '240%',
+              opacity: ray1,
+              transform: [{ rotate: '28deg' }],
+            }}>
+              <LinearGradient
+                colors={['transparent', 'rgba(253,186,116,0.28)', 'rgba(251,191,36,0.18)', 'transparent']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ flex: 1 }}
+              />
+            </Animated.View>
+            {/* God Ray 3 — rose-blush shaft */}
+            <Animated.View style={{
+              position: 'absolute', top: '-40%', left: '38%',
+              width: 90, height: '240%',
+              opacity: ray3,
+              transform: [{ rotate: '28deg' }, { translateX: rayShiftX }],
+            }}>
+              <LinearGradient
+                colors={['transparent', 'rgba(251,113,133,0.16)', 'rgba(253,164,175,0.12)', 'transparent']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ flex: 1 }}
+              />
+            </Animated.View>
+            {/* God Ray 4 — wide peach shaft far right */}
+            <Animated.View style={{
+              position: 'absolute', top: '-40%', left: '58%',
+              width: 130, height: '240%',
+              opacity: ray4,
+              transform: [{ rotate: '28deg' }],
+            }}>
+              <LinearGradient
+                colors={['transparent', 'rgba(251,191,36,0.18)', 'rgba(253,186,116,0.12)', 'transparent']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ flex: 1 }}
+              />
+            </Animated.View>
+            {/* God Ray 5 — thin highlight accent */}
+            <Animated.View style={{
+              position: 'absolute', top: '-40%', left: '80%',
+              width: 55, height: '240%',
+              opacity: ray2,
+              transform: [{ rotate: '28deg' }, { translateX: rayShiftX }],
+            }}>
+              <LinearGradient
+                colors={['transparent', 'rgba(250,204,21,0.2)', 'rgba(253,224,71,0.13)', 'transparent']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ flex: 1 }}
+              />
+            </Animated.View>
+            {/* Warm haze at the bottom — dusk settling */}
+            <Animated.View style={[StyleSheet.absoluteFill, { opacity: ray3 }]}>
+              <LinearGradient
+                colors={['transparent', 'transparent', 'rgba(253,186,116,0.12)', 'rgba(252,165,165,0.15)']}
+                start={{ x: 0.2, y: 0.5 }} end={{ x: 0.8, y: 1.0 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </Animated.View>
+          </View>
+        )}
+
         {/* ── 1. Header ──────────────────────────────────────────────────── */}
         <AccessHeader />
 
@@ -269,7 +445,10 @@ export default function HomeScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Hero section */}
-          <View style={styles.hero} accessibilityLabel="Welcome">
+          <Animated.View 
+            style={[styles.hero, { opacity: heroOpacity, transform: [{ translateY: heroTranslateY }] }]} 
+            accessibilityLabel="Welcome"
+          >
             {/* Animated badge */}
             <Animated.View style={[styles.heroBadge, { transform: [{ scale: badgePulse }] }]}>
               <View style={styles.heroBadgeDot} />
@@ -277,7 +456,7 @@ export default function HomeScreen() {
             </Animated.View>
 
             <Text style={[styles.heroTitle, isNarrow && styles.heroTitleNarrow]} accessibilityRole="header" aria-level={1}>
-              AccessAssist
+              AbleLink
             </Text>
             <Text style={[styles.heroTagline, isNarrow && styles.heroTaglineNarrow]}>
               {ui.homeTagline ?? 'Your communication assistant for accessible services.'}
@@ -287,11 +466,11 @@ export default function HomeScreen() {
                 {ui.homeSub ?? 'Select your institution and choose how you would like to interact. You can change your selection at any time.'}
               </Text>
             )}
-          </View>
+          </Animated.View>
 
           {/* ── Institution cards ──────────────────────────────────────── */}
-          <View
-            style={styles.section}
+          <Animated.View
+            style={[styles.section, { opacity: instOpacity, transform: [{ translateY: instTranslateY }] }]}
             accessibilityLabel="Institution selection"
           >
             <View style={styles.sectionLabelRow}>
@@ -309,11 +488,11 @@ export default function HomeScreen() {
                 />
               ))}
             </View>
-          </View>
+          </Animated.View>
 
           {/* ── 3. One-Tap Auto Voice Assistant Mic (Main Screen) ─────── */}
-          <View
-            style={styles.section}
+          <Animated.View
+            style={[styles.section, { opacity: voiceOpacity, transform: [{ translateY: voiceTranslateY }] }]}
             accessibilityLabel="Voice Assistant"
           >
             <Pressable
@@ -351,11 +530,11 @@ export default function HomeScreen() {
                 </View>
               </LinearGradient>
             </Pressable>
-          </View>
+          </Animated.View>
 
           {/* ── Mode selector ──────────────────────────────────────────── */}
-          <View
-            style={styles.section}
+          <Animated.View
+            style={[styles.section, { opacity: modesOpacity, transform: [{ translateY: modesTranslateY }] }]}
             accessibilityLabel="Communication mode selection"
           >
             <View style={styles.sectionLabelRow}>
@@ -368,16 +547,18 @@ export default function HomeScreen() {
             <View style={styles.selectorWrapper}>
               <ModeSelector />
             </View>
-          </View>
+          </Animated.View>
 
           {/* ── Accessibility statement ─────────────────────────────────── */}
           <LinearGradient
-            colors={[AccessColors.tealFaint, AccessColors.bankAccentLight]}
+            colors={isDarkMode
+              ? ['rgba(6,182,212,0.08)', 'rgba(30,41,59,0.5)']
+              : [AccessColors.tealFaint, AccessColors.bankAccentLight]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.accessStatement}
           >
-            <KioskIcon name="info" size={15} color={AccessColors.teal} />
+            <KioskIcon name="info" size={15} color={isDarkMode ? '#5EEAD4' : AccessColors.teal} />
             <Text style={styles.accessStatementText}>
               {ui.a11yStatement}
             </Text>
@@ -386,7 +567,7 @@ export default function HomeScreen() {
 
         {/* ── 5. Assistance Footer ────────────────────────────────────── */}
         <AssistanceBar />
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -394,15 +575,15 @@ export default function HomeScreen() {
 // ── Styles ─────────────────────────────────────────────────────────────────
 
 function useStyles() {
-  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow, isDarkMode } = useAccessTheme();
   return React.useMemo(() => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: AccessColors.background,
+    backgroundColor: 'transparent',
   },
   screen: {
     flex: 1,
-    backgroundColor: AccessColors.background,
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,
@@ -433,9 +614,9 @@ function useStyles() {
     alignItems: 'center',
     gap: AccessSpacing.xs,
     alignSelf: 'flex-start',
-    backgroundColor: AccessColors.tealFaint,
+    backgroundColor: isDarkMode ? 'rgba(6,182,212,0.12)' : AccessColors.tealFaint,
     borderWidth: 1.5,
-    borderColor: AccessColors.teal + '50',
+    borderColor: isDarkMode ? 'rgba(94,234,212,0.4)' : AccessColors.teal + '50',
     borderRadius: 99,
     paddingHorizontal: AccessSpacing.md,
     paddingVertical: 6,
@@ -449,15 +630,18 @@ function useStyles() {
   heroBadgeText: {
     fontSize: AccessFontSize.xs,
     fontWeight: AccessFontWeight.semibold,
-    color: AccessColors.tealDark,
+    color: isDarkMode ? '#5EEAD4' : AccessColors.tealDark,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
   heroTitle: {
     fontSize: AccessFontSize.hero,
     fontWeight: AccessFontWeight.bold,
-    color: AccessColors.navy,
-    letterSpacing: -0.5,
+    color: isDarkMode ? '#FFFFFF' : '#0B8A7E',
+    letterSpacing: -1.5,
+    textShadowColor: isDarkMode ? 'rgba(45,212,191,0.6)' : 'rgba(11,138,126,0.3)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: isDarkMode ? 24 : 16,
   },
   heroTitleNarrow: {
     fontSize: 32,
@@ -466,7 +650,7 @@ function useStyles() {
   heroTagline: {
     fontSize: AccessFontSize.lg,
     fontWeight: AccessFontWeight.regular,
-    color: AccessColors.textPrimary,
+    color: isDarkMode ? 'rgba(226,232,240,0.95)' : AccessColors.textPrimary,
     lineHeight: 34,
   },
   heroTaglineNarrow: {
@@ -476,7 +660,7 @@ function useStyles() {
   heroSub: {
     fontSize: AccessFontSize.base,
     fontWeight: AccessFontWeight.regular,
-    color: AccessColors.textSecondary,
+    color: isDarkMode ? 'rgba(148,163,184,0.9)' : AccessColors.textSecondary,
     lineHeight: 26,
   },
 
@@ -493,19 +677,19 @@ function useStyles() {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: AccessColors.navy,
+    backgroundColor: isDarkMode ? '#5EEAD4' : AccessColors.navy,
   },
   sectionLabel: {
     fontSize: AccessFontSize.sm,
     fontWeight: AccessFontWeight.bold,
-    color: AccessColors.tealDark,
+    color: isDarkMode ? '#94A3B8' : AccessColors.tealDark,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   sectionSub: {
     fontSize: AccessFontSize.base,
     fontWeight: AccessFontWeight.regular,
-    color: AccessColors.textSecondary,
+    color: isDarkMode ? 'rgba(148,163,184,0.85)' : AccessColors.textSecondary,
     lineHeight: 24,
   },
 
@@ -532,9 +716,9 @@ function useStyles() {
   },
   institutionCard: {
     flex: 1,
-    backgroundColor: AccessColors.cardDefault,
+    backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.45)' : 'rgba(255, 255, 255, 0.65)',
     borderWidth: 1.5,
-    borderColor: 'transparent', // We'll use shadow instead of border for premium feel
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.9)',
     borderRadius: AccessRadius.xl,
     position: 'relative',
     overflow: 'hidden',
@@ -548,7 +732,8 @@ function useStyles() {
     borderWidth: 0,
   },
   institutionCardHovered: {
-    backgroundColor: AccessColors.cardHover,
+    backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.65)' : 'rgba(255, 255, 255, 0.9)',
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : '#FFFFFF',
     transform: Platform.OS === 'web' ? [{ translateY: -2 }] : [],
   },
   institutionCardPressed: {
@@ -708,15 +893,15 @@ function useStyles() {
     gap: AccessSpacing.md,
     padding: AccessSpacing.lg,
     borderWidth: 1,
-    borderColor: AccessColors.teal + '35',
+    borderColor: isDarkMode ? 'rgba(94,234,212,0.2)' : AccessColors.teal + '35',
     borderRadius: AccessRadius.lg,
   },
   accessStatementText: {
     flex: 1,
     fontSize: AccessFontSize.base,
     fontWeight: AccessFontWeight.regular,
-    color: AccessColors.tealDark,
+    color: isDarkMode ? 'rgba(148,163,184,0.9)' : AccessColors.tealDark,
     lineHeight: 22,
   },
-}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow, isDarkMode]);
 }

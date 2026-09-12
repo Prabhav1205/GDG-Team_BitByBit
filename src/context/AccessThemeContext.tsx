@@ -21,17 +21,19 @@ export interface AccessTheme {
   AccessShadow: typeof AccessShadow;
   AccessAnimation: typeof AccessAnimation;
   isReducedMotion: boolean;
+  isDarkMode?: boolean;
 }
 
 const AccessThemeContext = createContext<AccessTheme | null>(null);
 
 export function AccessThemeProvider({ children }: { children: React.ReactNode }) {
   const { session } = useSession();
-  const { highContrast, largeText, largeTouchTargets, reducedMotion } = session.accessibility;
+  const { highContrast, darkMode, largeText, largeTouchTargets, reducedMotion } = session.accessibility;
 
   const theme = useMemo(() => {
-    // 1. High Contrast Colors
+    // 1. High Contrast / Dark Mode Colors
     const AccessColors = { ...BaseColors } as Record<keyof typeof BaseColors, string>;
+    
     if (highContrast) {
       AccessColors.background = '#000000';
       AccessColors.cardDefault = '#111111';
@@ -48,6 +50,27 @@ export function AccessThemeProvider({ children }: { children: React.ReactNode })
       AccessColors.headerBg = '#000000';
       AccessColors.headerGradientStart = '#000000';
       AccessColors.headerGradientEnd = '#222222';
+    } else if (darkMode) {
+      // Deep Space Dark Mode
+      AccessColors.background = '#060B19'; // Very deep midnight blue
+      AccessColors.cardDefault = 'rgba(15, 23, 42, 0.7)'; // Frosted dark card
+      AccessColors.cardHover = 'rgba(30, 41, 59, 0.8)';
+      AccessColors.cardSelected = 'rgba(13, 148, 136, 0.2)'; // Faint teal bg
+      AccessColors.textPrimary = '#F8FAFC';
+      AccessColors.textSecondary = '#94A3B8';
+      AccessColors.textTertiary = '#64748B';
+      AccessColors.textOnDark = '#FFFFFF';
+      AccessColors.navy = '#38BDF8'; // Neon blue for highlights
+      AccessColors.navyHover = '#7DD3FC';
+      AccessColors.teal = '#2DD4BF'; // Bright neon teal
+      AccessColors.tealDark = '#14B8A6';
+      AccessColors.tealFaint = 'rgba(45, 212, 191, 0.1)';
+      AccessColors.border = 'rgba(255, 255, 255, 0.1)';
+      AccessColors.borderLight = 'rgba(255, 255, 255, 0.05)';
+      AccessColors.divider = 'rgba(255, 255, 255, 0.1)';
+      AccessColors.headerBg = 'rgba(15, 23, 42, 0.5)';
+      AccessColors.headerGradientStart = 'rgba(15, 23, 42, 0.5)';
+      AccessColors.headerGradientEnd = 'rgba(15, 23, 42, 0.5)';
     }
 
     // 2. Large Text
@@ -85,8 +108,9 @@ export function AccessThemeProvider({ children }: { children: React.ReactNode })
       AccessShadow,
       AccessAnimation: AccessAnimationContext as typeof AccessAnimation,
       isReducedMotion: reducedMotion,
+      isDarkMode: darkMode || highContrast,
     };
-  }, [highContrast, largeText, largeTouchTargets, reducedMotion]);
+  }, [highContrast, darkMode, largeText, largeTouchTargets, reducedMotion]);
 
   return (
     <AccessThemeContext.Provider value={theme}>

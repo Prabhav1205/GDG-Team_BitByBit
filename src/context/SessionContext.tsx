@@ -21,6 +21,7 @@ export type InstitutionType = 'bank' | 'hospital' | 'government' | null;
 
 export interface AccessibilitySettings {
   highContrast: boolean;
+  darkMode: boolean;
   largeText: boolean;
   reducedMotion: boolean;
   screenReaderFriendly: boolean;
@@ -112,6 +113,7 @@ function generateSessionId(): string {
 
 const DEFAULT_A11Y: AccessibilitySettings = {
   highContrast: false,
+  darkMode: false,
   largeText: false,
   reducedMotion: false,
   screenReaderFriendly: false,

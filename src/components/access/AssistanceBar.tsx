@@ -34,6 +34,7 @@ import { LANGUAGES, UI_STRINGS, toSafeLangCode } from '@/constants/i18n';
 
 export function AssistanceBar() {
   const styles = useStyles();
+  const { AccessColors } = useAccessTheme();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isNarrow = width < 600;
@@ -85,7 +86,6 @@ export function AssistanceBar() {
         visible={langModalVisible}
         onClose={() => setLangModalVisible(false)}
       />
-      <View style={styles.divider} />
 
       {isNarrow ? (
         /* ── NARROW / MOBILE layout ──────────────────────────────── */
@@ -250,14 +250,14 @@ export function AssistanceBar() {
 // ── Styles ─────────────────────────────────────────────────────────────────
 
 function useStyles() {
-  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow, isDarkMode } = useAccessTheme();
   return React.useMemo(() => StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(244, 243, 240, 0.75)', // AccessColors.background but transparent
-  },
-  divider: {
-    height: 1.5,
-    backgroundColor: AccessColors.divider,
+    backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.45)' : 'rgba(255, 255, 255, 0.75)',
+    borderTopWidth: 1.5,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.9)',
+    ...AccessShadow.lg,
+    overflow: 'hidden',
   },
 
   // ── Wide layout ───────────────────────────────────────────────────────────
@@ -426,5 +426,5 @@ function useStyles() {
     textAlign: 'right',
     flex: 1,
   },
-}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow, isDarkMode]);
 }

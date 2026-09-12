@@ -44,19 +44,19 @@ export function LanguageSelectorModal({ visible, onClose }: Props) {
   const styles = useStyles();
   const { session, setLanguage } = useSession();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const slideAnim = useRef(new Animated.Value(400)).current;
 
   useEffect(() => {
     if (visible) {
       Animated.parallel([
         Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
-        Animated.spring(scaleAnim, { toValue: 1, speed: 22, bounciness: 4, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 0, speed: 20, bounciness: 4, useNativeDriver: true }),
       ]).start();
     } else {
       fadeAnim.setValue(0);
-      scaleAnim.setValue(0.95);
+      slideAnim.setValue(400);
     }
-  }, [visible, fadeAnim, scaleAnim]);
+  }, [visible, fadeAnim, slideAnim]);
 
   // Keyboard: Escape to close
   useEffect(() => {
@@ -98,9 +98,13 @@ export function LanguageSelectorModal({ visible, onClose }: Props) {
             style={[
               styles.sheet,
               AccessShadow.lg as any,
-              { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
             ]}
           >
+            {/* Grab handle for bottom sheet feel */}
+            <View style={styles.sheetHandleContainer}>
+              <View style={styles.sheetHandle} />
+            </View>
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.headerLeft}>
@@ -209,21 +213,33 @@ function useStyles() {
   return React.useMemo(() => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)', // reduced opacity since blur takes effect
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: AccessSpacing.xl,
+    justifyContent: 'flex-end',
+    padding: AccessSpacing.md,
   },
   sheetOuter: {
     width: '100%',
-    maxWidth: 440,
+    maxWidth: 500,
+    marginBottom: Platform.OS === 'ios' ? 20 : 0,
   },
   sheet: {
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: AccessRadius.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    borderRadius: AccessRadius.xl,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: 'rgba(255, 255, 255, 0.6)',
     overflow: 'hidden',
+  },
+  sheetHandleContainer: {
+    alignItems: 'center',
+    paddingTop: AccessSpacing.md,
+    paddingBottom: AccessSpacing.xs,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(0,0,0,0.15)',
   },
 
   // ── Header ────────────────────────────────────────────────────────────────

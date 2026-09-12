@@ -25,17 +25,11 @@ import {
   Platform,
   Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { KioskIcon, type IconName } from './KioskIcon';
-import {
-  AccessColors,
-  AccessSpacing,
-  AccessRadius,
-  AccessFontSize,
-  AccessFontWeight,
-  AccessShadow,
-  AccessAnimation,
-} from '@/constants/access-theme';
+import { AccessColors, AccessSpacing, AccessShadow, AccessAnimation } from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -54,19 +48,21 @@ export interface ModeCardProps {
   testID?: string;
   /** Keyboard shortcut number (1-4) */
   shortcutNumber?: number;
+  /** Whether to use the narrow mobile horizontal layout */
+  isNarrow?: boolean;
 }
 
 // ── Accent colour map ──────────────────────────────────────────────────────
 
-const MODE_ACCENTS: Record<string, { accent: string; light: string; border: string }> = {
-  sign:            { accent: AccessColors.signAccent,    light: AccessColors.signAccentLight,    border: AccessColors.signAccent + '50' },
-  voice:           { accent: AccessColors.voiceAccent,   light: AccessColors.voiceAccentLight,   border: AccessColors.voiceAccent + '50' },
-  text:            { accent: AccessColors.textAccent,    light: AccessColors.textAccentLight,    border: AccessColors.textAccent + '50' },
-  'touch':         { accent: AccessColors.touchAccent,   light: AccessColors.touchAccentLight,   border: AccessColors.touchAccent + '50' },
+const MODE_ACCENTS: Record<string, { accent: string; light: string; border: string; gradient: [string, string] }> = {
+  sign:            { accent: AccessColors.signAccent,    light: AccessColors.signAccentLight,    border: AccessColors.signAccent + '50', gradient: [AccessColors.signAccent, '#6D28D9'] },
+  voice:           { accent: AccessColors.voiceAccent,   light: AccessColors.voiceAccentLight,   border: AccessColors.voiceAccent + '50', gradient: [AccessColors.voiceAccent, '#0369A1'] },
+  text:            { accent: AccessColors.textAccent,    light: AccessColors.textAccentLight,    border: AccessColors.textAccent + '50', gradient: [AccessColors.textAccent, '#B45309'] },
+  'touch':         { accent: AccessColors.touchAccent,   light: AccessColors.touchAccentLight,   border: AccessColors.touchAccent + '50', gradient: [AccessColors.touchAccent, '#BE185D'] },
 };
 
 function getAccent(iconName: string) {
-  return MODE_ACCENTS[iconName] ?? { accent: AccessColors.teal, light: AccessColors.tealFaint, border: AccessColors.teal + '50' };
+  return MODE_ACCENTS[iconName] ?? { accent: AccessColors.teal, light: AccessColors.tealFaint, border: AccessColors.teal + '50', gradient: [AccessColors.teal, AccessColors.tealDark] };
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -79,10 +75,12 @@ export function ModeCard({
   onSelect,
   testID,
   shortcutNumber,
+  isNarrow = false,
 }: ModeCardProps) {
+  const styles = useStyles();
   const [hovered, setHovered] = useState(false);
   const [scaleAnim] = useState(() => new Animated.Value(1));
-  const [checkAnim] = useState(() => new Animated.Value(0));
+  const [checkAnim] = useState(() => new Animated.Value(selected ? 1 : 0));
 
   const accent = getAccent(iconName);
 
@@ -106,10 +104,11 @@ export function ModeCard({
     }).start();
   }, [selected, checkAnim]);
 
-  const iconColor = selected ? accent.accent : AccessColors.navy;
+  const textColor = selected ? '#FFFFFF' : AccessColors.textPrimary;
+  const descColor = selected ? 'rgba(255,255,255,0.9)' : AccessColors.textSecondary;
 
   return (
-    <Animated.View style={[styles.wrapper, { transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View style={[styles.wrapper, isNarrow && styles.wrapperNarrow, { transform: [{ scale: scaleAnim }] }]}>
       <Pressable
         onPress={onSelect}
         onHoverIn={() => { setHovered(true); animateTo(1.025); }}
@@ -118,11 +117,12 @@ export function ModeCard({
         onPressOut={() => animateTo(hovered ? 1.025 : 1)}
         style={({ focused }: any) => [
           styles.card,
+          isNarrow && styles.cardNarrow,
           hovered && !selected && styles.cardHover,
           selected && styles.cardSelected,
           selected && (AccessShadow.teal as any),
-          !selected && !hovered && (AccessShadow.sm as any),
-          hovered && !selected && (AccessShadow.md as any),
+          !selected && !hovered && (AccessShadow.md as any),
+          hovered && !selected && (AccessShadow.lg as any),
           focused && styles.cardFocused,
         ]}
         accessibilityRole="button"
@@ -131,43 +131,60 @@ export function ModeCard({
         accessibilityHint={`Press key ${shortcutNumber ?? ''} or tap to select ${title}`}
         testID={testID}
       >
-        {/* Coloured top accent bar */}
-        <View style={[styles.accentBar, { backgroundColor: accent.accent }]} />
+        {selected ? (
+          <LinearGradient
+            colors={accent.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        ) : (
+          <LinearGradient
+            colors={accent.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: isNarrow ? 0 : 1, y: isNarrow ? 1 : 0 }}
+            style={[styles.accentBar, isNarrow && styles.accentBarNarrow]}
+          />
+        )}
 
-        {/* Icon container */}
-        <View
-          style={[
-            styles.iconContainer,
-            selected
-              ? [styles.iconContainerSelected, { backgroundColor: accent.light, borderColor: accent.border }]
-              : styles.iconContainerDefault,
-          ]}
-          aria-hidden
-        >
-          <KioskIcon name={iconName} size={34} color={iconColor} />
-        </View>
-
-        {/* Text content */}
-        <View style={styles.textBlock}>
-          <View style={styles.titleRow}>
-            <Text
-              style={[
-                styles.title,
-                selected && [styles.titleSelected, { color: accent.accent }],
-              ]}
-              numberOfLines={1}
-            >
-              {title}
-            </Text>
-            {Boolean(shortcutNumber) && (
-              <View style={styles.shortcutBadge} aria-hidden>
-                <Text style={styles.shortcutText}>{shortcutNumber}</Text>
-              </View>
-            )}
+        <View style={[styles.contentBlock, isNarrow && styles.contentBlockNarrow]}>
+          {/* Icon container */}
+          <View
+            style={[
+              styles.iconContainer,
+              isNarrow && styles.iconContainerNarrow,
+              selected
+                ? { backgroundColor: 'rgba(255,255,255,0.2)', borderColor: 'transparent' }
+                : { backgroundColor: accent.light, borderColor: accent.border },
+            ]}
+            aria-hidden
+          >
+            <KioskIcon name={iconName} size={isNarrow ? 24 : 34} color={selected ? '#FFFFFF' : accent.accent} />
           </View>
-          <Text style={styles.description} numberOfLines={2}>
-            {description}
-          </Text>
+
+          {/* Text content */}
+          <View style={styles.textBlock}>
+            <View style={styles.titleRow}>
+              <Text
+                style={[
+                  styles.title,
+                  isNarrow && styles.titleNarrow,
+                  { color: textColor },
+                ]}
+                numberOfLines={1}
+              >
+                {title}
+              </Text>
+              {Boolean(shortcutNumber) && (
+                <View style={[styles.shortcutBadge, selected && { backgroundColor: 'rgba(255,255,255,0.3)' }]} aria-hidden>
+                  <Text style={styles.shortcutText}>{shortcutNumber}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.description, isNarrow && styles.descriptionNarrow, { color: descColor }]} numberOfLines={2}>
+              {description}
+            </Text>
+          </View>
         </View>
 
         {/* Animated checkmark badge (top-right corner) */}
@@ -177,12 +194,12 @@ export function ModeCard({
             {
               transform: [{ scale: checkAnim }],
               opacity: checkAnim,
-              backgroundColor: accent.accent,
+              backgroundColor: '#FFFFFF',
             },
           ]}
           aria-hidden
         >
-          <KioskIcon name="check" size={10} color="#FFFFFF" />
+          <KioskIcon name="check" size={12} color={accent.accent} />
         </Animated.View>
       </Pressable>
     </Animated.View>
@@ -191,9 +208,15 @@ export function ModeCard({
 
 // ── Styles ─────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   wrapper: {
     flex: 1,
+  },
+  wrapperNarrow: {
+    width: '100%',
+    flex: undefined,
   },
 
   // ── Card base ─────────────────────────────────────────────────────────────
@@ -202,25 +225,26 @@ const styles = StyleSheet.create({
     minHeight: 172,
     backgroundColor: AccessColors.cardDefault,
     borderWidth: 1.5,
-    borderColor: AccessColors.border,
-    borderRadius: AccessRadius.md,
-    padding: AccessSpacing.xl,
-    gap: AccessSpacing.md,
+    borderColor: 'transparent',
+    borderRadius: AccessRadius.xl,
     position: 'relative',
     overflow: 'hidden',
+    justifyContent: 'center',
     // Ensure keyboard focus is visible
     outlineStyle: Platform.select({ web: 'none' as any, default: undefined }),
+  },
+  cardNarrow: {
+    minHeight: 90,
+    justifyContent: 'center',
   },
 
   // ── States ────────────────────────────────────────────────────────────────
   cardHover: {
-    borderColor: AccessColors.borderHover,
     backgroundColor: AccessColors.cardHover,
+    transform: Platform.OS === 'web' ? [{ translateY: -2 }] : [],
   },
   cardSelected: {
-    borderColor: AccessColors.tealBorder,
-    borderWidth: 2,
-    backgroundColor: AccessColors.cardSelected,
+    borderWidth: 0,
   },
   // Web-specific focus ring — high visibility per WCAG 2.4.11
   cardFocused: {
@@ -241,27 +265,43 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 3,
-    borderTopLeftRadius: AccessRadius.md,
-    borderTopRightRadius: AccessRadius.md,
-    opacity: 0.85,
+    height: 6,
+  },
+  accentBarNarrow: {
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: undefined,
+    width: 6,
+    height: '100%',
+  },
+
+  contentBlock: {
+    padding: AccessSpacing.xl,
+    gap: AccessSpacing.md,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  contentBlockNarrow: {
+    padding: AccessSpacing.md,
+    gap: AccessSpacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
   // ── Icon ──────────────────────────────────────────────────────────────────
   iconContainer: {
-    width: 58,
-    height: 58,
-    borderRadius: AccessRadius.sm,
+    width: 64,
+    height: 64,
+    borderRadius: AccessRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 1,
   },
-  iconContainerDefault: {
-    backgroundColor: AccessColors.background,
-    borderColor: AccessColors.borderLight,
-  },
-  iconContainerSelected: {
-    // backgroundColor and borderColor set inline
+  iconContainerNarrow: {
+    width: 52,
+    height: 52,
+    borderRadius: AccessRadius.sm,
   },
 
   // ── Text ──────────────────────────────────────────────────────────────────
@@ -288,18 +328,21 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: AccessFontSize.lg,
-    fontWeight: AccessFontWeight.semibold,
-    color: AccessColors.textPrimary,
+    fontWeight: AccessFontWeight.bold,
     lineHeight: 30,
   },
-  titleSelected: {
-    // color set inline via accent
+  titleNarrow: {
+    fontSize: AccessFontSize.base,
+    lineHeight: 24,
   },
   description: {
-    fontSize: AccessFontSize.base,
-    fontWeight: AccessFontWeight.regular,
-    color: AccessColors.textSecondary,
-    lineHeight: 22,
+    fontSize: AccessFontSize.sm,
+    fontWeight: AccessFontWeight.medium,
+    lineHeight: 20,
+  },
+  descriptionNarrow: {
+    fontSize: AccessFontSize.xs,
+    lineHeight: 18,
   },
 
   // ── Animated check badge ──────────────────────────────────────────────────
@@ -307,10 +350,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: AccessSpacing.md,
     right: AccessSpacing.md,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    ...AccessShadow.sm,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

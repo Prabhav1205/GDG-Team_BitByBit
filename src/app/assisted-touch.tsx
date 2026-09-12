@@ -24,45 +24,199 @@ import { AccessHeader } from '@/components/access/AccessHeader';
 import { PageHeader } from '@/components/access/PageHeader';
 import { useAudioNav } from '@/context/AudioNavContext';
 import { useSession, type AccessibilitySettings } from '@/context/SessionContext';
+import { useAccessTheme } from '@/context/AccessThemeContext';
 import {
   AccessColors,
   AccessSpacing,
   AccessRadius,
   AccessFontSize,
   AccessFontWeight,
+  AccessShadow,
 } from '@/constants/access-theme';
+import {
+  LANGUAGES,
+  toSafeLangCode,
+  type LangCode,
+} from '@/constants/i18n';
+import { speechEngine } from '@/services/speech-engine';
 
 // ── Action buttons ─────────────────────────────────────────────────────────
 
-type ActionConfig = { id: string; label: string; emoji: string; variant: 'primary' | 'danger' | 'neutral' };
+type ActionConfig = {
+  id: string;
+  emoji: string;
+  variant: 'primary' | 'danger' | 'neutral';
+  localLabel: Record<LangCode, string>;
+};
 
 const ACTIONS: ActionConfig[] = [
-  { id: 'yes',    label: 'Yes',    emoji: '✅', variant: 'primary'  },
-  { id: 'no',     label: 'No',     emoji: '❌', variant: 'danger'   },
-  { id: 'help',   label: 'Help',   emoji: '🆘', variant: 'primary'  },
-  { id: 'next',   label: 'Next',   emoji: '➡️', variant: 'neutral'  },
-  { id: 'back',   label: 'Back',   emoji: '⬅️', variant: 'neutral'  },
-  { id: 'repeat', label: 'Repeat', emoji: '🔄', variant: 'neutral'  },
-  { id: 'done',   label: 'Done',   emoji: '✔️', variant: 'primary'  },
+  { id: 'yes',    emoji: '✅', variant: 'primary',  localLabel: { en: 'Yes',    hi: 'हाँ',      mr: 'होय' } },
+  { id: 'no',     emoji: '❌', variant: 'danger',   localLabel: { en: 'No',     hi: 'नहीं',     mr: 'नाही' } },
+  { id: 'help',   emoji: '🆘', variant: 'primary',  localLabel: { en: 'Help',   hi: 'मदद',      mr: 'मदत' } },
+  { id: 'next',   emoji: '➡️', variant: 'neutral',  localLabel: { en: 'Next',   hi: 'आगे',      mr: 'पुढे' } },
+  { id: 'back',   emoji: '⬅️', variant: 'neutral',  localLabel: { en: 'Back',   hi: 'पीछे',     mr: 'मागे' } },
+  { id: 'repeat', emoji: '🔄', variant: 'neutral',  localLabel: { en: 'Repeat', hi: 'दोहराएं',  mr: 'पुन्हा' } },
+  { id: 'done',   emoji: '✔️', variant: 'primary',  localLabel: { en: 'Done',   hi: 'पूर्ण',     mr: 'झाले' } },
 ];
 
 // ── Settings ───────────────────────────────────────────────────────────────
 
 type SettingKey = keyof AccessibilitySettings;
 
-const SETTINGS: { key: SettingKey; label: string; description: string; emoji: string }[] = [
-  { key: 'largeTouchTargets', emoji: '📐', label: 'Large Touch Targets', description: 'Increases button size for easier tapping' },
-  { key: 'dwellClick',        emoji: '⏱️', label: 'Dwell Selection (Tremor Tolerant)', description: 'Auto-selects button after holding pointer over it for 1.5 seconds' },
-  { key: 'switchScanning',    emoji: '🔘', label: 'Switch Scanning Mode', description: 'Auto-cycles highlight sequentially; press Space / Enter or Switch Trigger to select' },
-  { key: 'highContrast',      emoji: '👁️', label: 'High Contrast Mode', description: 'Maximum contrast for low-vision users' },
+const SETTINGS: {
+  key: SettingKey;
+  emoji: string;
+  localLabel: Record<LangCode, string>;
+  localDescription: Record<LangCode, string>;
+}[] = [
+  {
+    key: 'largeTouchTargets',
+    emoji: '📐',
+    localLabel: {
+      en: 'Large Touch Targets',
+      hi: 'बड़े टच लक्ष्य',
+      mr: 'मोठे टच टार्गेट्स',
+    },
+    localDescription: {
+      en: 'Increases button size for easier tapping',
+      hi: 'आसानी से टैप करने के लिए बटन का आकार बढ़ाता है',
+      mr: 'सहज टॅप करण्यासाठी बटणाचा आकार वाढवतो',
+    },
+  },
+  {
+    key: 'dwellClick',
+    emoji: '⏱️',
+    localLabel: {
+      en: 'Dwell Selection (Tremor Tolerant)',
+      hi: 'ड्वेल चयन (कंपन सहनशील)',
+      mr: 'ड्वेल निवड (कंपन सहनशील)',
+    },
+    localDescription: {
+      en: 'Auto-selects button after holding pointer over it for 1.5 seconds',
+      hi: '1.5 सेकंड तक पॉइंटर रखने के बाद बटन का स्वत: चयन करता है',
+      mr: '1.5 सेकंद पॉइंटर धरून ठेवल्यानंतर बटण आपोआप निवडले जाते',
+    },
+  },
+  {
+    key: 'switchScanning',
+    emoji: '🔘',
+    localLabel: {
+      en: 'Switch Scanning Mode',
+      hi: 'स्विच स्कैनिंग मोड',
+      mr: 'स्विच स्कॅनिंग मोड',
+    },
+    localDescription: {
+      en: 'Auto-cycles highlight sequentially; press Space / Enter or Switch Trigger to select',
+      hi: 'क्रमशः हाइलाइट को स्वचालित रूप से घुमाता है; चुनने के लिए स्पेस / एंटर या स्विच ट्रिगर दबाएं',
+      mr: 'क्रमशः हायलाइट फिरवतो; निवडण्यासाठी स्पेस / एंटर किंवा स्विच ट्रिगर दाबा',
+    },
+  },
+  {
+    key: 'highContrast',
+    emoji: '👁️',
+    localLabel: {
+      en: 'High Contrast Mode',
+      hi: 'उच्च कंट्रास्ट मोड',
+      mr: 'हाय कॉन्ट्रास्ट मोड',
+    },
+    localDescription: {
+      en: 'Maximum contrast for low-vision users',
+      hi: 'कम दृष्टि वाले उपयोगकर्ताओं के लिए अधिकतम कंट्रास्ट',
+      mr: 'कमी दृष्टी असलेल्या वापरकर्त्यांसाठी कमाल कॉन्ट्रास्ट',
+    },
+  },
 ];
+
+const ASSISTED_STRINGS: Record<
+  LangCode,
+  {
+    pageTitle: string;
+    backLabel: string;
+    switchTriggerPrompt: (label: string) => string;
+    switchTriggerTap: (emoji: string, label: string) => string;
+    selectedFeedback: (label: string) => string;
+    explainTitle: string;
+    explainText: React.ReactNode;
+    settingsHeading: string;
+    targetBadge: string;
+  }
+> = {
+  en: {
+    pageTitle: 'Easy Interaction (Motor Accessibility)',
+    backLabel: 'Back to modes',
+    switchTriggerPrompt: (label) =>
+      `SWITCH TRIGGER — TAP OR PRESS SPACE TO SELECT (${label.toUpperCase()})`,
+    switchTriggerTap: (emoji, label) =>
+      `🔘 TAP HERE TO SELECT: ${emoji} ${label.toUpperCase()}`,
+    selectedFeedback: (label) => `✅ Selected: ${label}`,
+    explainTitle: 'Motor Accessibility Controls',
+    explainText: (
+      <>
+        Designed for users with motor tremors or limited dexterity. Enable{' '}
+        <Text style={{ fontWeight: 'bold' }}>Dwell Selection</Text> to select by
+        holding your pointer, or{' '}
+        <Text style={{ fontWeight: 'bold' }}>Switch Scanning</Text> to cycle
+        options and trigger with any single press or key.
+      </>
+    ),
+    settingsHeading: 'Interaction Settings',
+    targetBadge: 'TARGET',
+  },
+  hi: {
+    pageTitle: 'सरल इंटरैक्शन (मोटर पहुंच)',
+    backLabel: 'विकल्पों पर वापस',
+    switchTriggerPrompt: (label) =>
+      `स्विच ट्रिगर — चुनने के लिए टैप करें या स्पेस दबाएं (${label.toUpperCase()})`,
+    switchTriggerTap: (emoji, label) =>
+      `🔘 चुनने के लिए यहां टैप करें: ${emoji} ${label.toUpperCase()}`,
+    selectedFeedback: (label) => `✅ चुना गया: ${label}`,
+    explainTitle: 'मोटर पहुंच नियंत्रण',
+    explainText: (
+      <>
+        मोटर कंपन या सीमित निपुणता वाले उपयोगकर्ताओं के लिए डिज़ाइन किया गया।
+        पॉइंटर को रोककर रखने के लिए{' '}
+        <Text style={{ fontWeight: 'bold' }}>ड्वेल चयन</Text> सक्षम करें, या
+        विकल्पों को घुमाने और किसी भी सिंगल प्रेस से ट्रिगर करने के लिए{' '}
+        <Text style={{ fontWeight: 'bold' }}>स्विच स्कैनिंग</Text> सक्षम करें।
+      </>
+    ),
+    settingsHeading: 'इंटरैक्शन सेटिंग्स',
+    targetBadge: 'लक्ष्य',
+  },
+  mr: {
+    pageTitle: 'सोपी संवाद व्यवस्था (मोटर ऍक्सेसिबिलिटी)',
+    backLabel: 'पर्यायांवर परत',
+    switchTriggerPrompt: (label) =>
+      `स्विच ट्रिगर — निवडण्यासाठी टॅप करा किंवा स्पेस दाबा (${label.toUpperCase()})`,
+    switchTriggerTap: (emoji, label) =>
+      `🔘 निवडण्यासाठी येथे टॅप करा: ${emoji} ${label.toUpperCase()}`,
+    selectedFeedback: (label) => `✅ निवडले: ${label}`,
+    explainTitle: 'मोटर ऍक्सेसिबिलिटी नियंत्रणे',
+    explainText: (
+      <>
+        कंपन किंवा मर्यादित हालचाल असलेल्या वापरकर्त्यांसाठी डिझाइन केलेले।
+        पॉइंटर धरून ठेवून निवडण्यासाठी{' '}
+        <Text style={{ fontWeight: 'bold' }}>ड्वेल निवड</Text> सक्षम करा, किंवा
+        पर्याय फिरवून एकाच स्पर्शाने निवडण्यासाठी{' '}
+        <Text style={{ fontWeight: 'bold' }}>स्विच स्कॅनिंग</Text> वापरा।
+      </>
+    ),
+    settingsHeading: 'इंटरॅक्शन सेटिंग्ज',
+    targetBadge: 'लक्ष्य',
+  },
+};
 
 // ── Screen ──────────────────────────────────────────────────────────────────
 
 export default function AssistedTouchPage() {
+  const styles = useStyles();
   const { announce } = useAudioNav();
-  const { session, updateAccessibility } = useSession();
+  const { session, updateAccessibility, broadcastTranslation } = useSession();
   const [lastPressed, setLastPressed] = useState<string | null>(null);
+
+  const lang = toSafeLangCode(session.language);
+  const speechCode = LANGUAGES[lang].speechCode;
+  const t = ASSISTED_STRINGS[lang] || ASSISTED_STRINGS.en;
 
   const settings = session.accessibility;
 
@@ -88,9 +242,12 @@ export default function AssistedTouchPage() {
     updateAccessibility(key);
   }
 
-  function handleSelectAction(label: string) {
+  function handleSelectAction(actionConfig: ActionConfig) {
+    const label = actionConfig.localLabel[lang] || actionConfig.localLabel.en;
     setLastPressed(label);
-    announce(`Selected ${label}`);
+    announce(t.selectedFeedback(label));
+    speechEngine.speak(label, { lang: speechCode });
+    broadcastTranslation(label, 'Assisted Touch', 1.0);
     clearDwellTimer();
   }
 
@@ -122,7 +279,7 @@ export default function AssistedTouchPage() {
     }, INTERVAL_MS);
 
     dwellTimerRef.current = setTimeout(() => {
-      handleSelectAction(action.label);
+      handleSelectAction(action);
     }, DWELL_DURATION);
   }
 
@@ -149,8 +306,16 @@ export default function AssistedTouchPage() {
 
     const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(scanPulseAnim, { toValue: 1.06, duration: 400, useNativeDriver: true }),
-        Animated.timing(scanPulseAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(scanPulseAnim, {
+          toValue: 1.06,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanPulseAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
       ])
     );
     pulse.start();
@@ -167,7 +332,7 @@ export default function AssistedTouchPage() {
         e.preventDefault();
         const activeAction = ACTIONS[scanIndex];
         if (activeAction) {
-          handleSelectAction(activeAction.label);
+          handleSelectAction(activeAction);
         }
       }
     };
@@ -175,12 +340,16 @@ export default function AssistedTouchPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.switchScanning, scanIndex]);
+  }, [settings.switchScanning, scanIndex, lang]);
 
   // Clean up dwell on unmount
   useEffect(() => {
     return () => clearDwellTimer();
   }, []);
+
+  const activeScanAction = ACTIONS[scanIndex];
+  const activeScanLabel =
+    activeScanAction?.localLabel[lang] || activeScanAction?.localLabel.en || '';
 
   const VARIANT_STYLES: Record<ActionConfig['variant'], object> = {
     primary: {
@@ -192,7 +361,9 @@ export default function AssistedTouchPage() {
       borderColor: settings.highContrast ? '#8B0000' : '#DC2626',
     },
     neutral: {
-      backgroundColor: settings.highContrast ? '#333333' : AccessColors.cardDefault,
+      backgroundColor: settings.highContrast
+        ? '#333333'
+        : AccessColors.cardDefault,
       borderColor: settings.highContrast ? '#333333' : AccessColors.border,
     },
   };
@@ -204,7 +375,11 @@ export default function AssistedTouchPage() {
     >
       <View style={styles.screen}>
         <AccessHeader />
-        <PageHeader title="Easy Interaction (Motor Accessibility)" backLabel="Back to modes" backRoute="/" />
+        <PageHeader
+          title={t.pageTitle}
+          backLabel={t.backLabel}
+          backRoute="/"
+        />
 
         <ScrollView
           style={styles.scroll}
@@ -218,13 +393,13 @@ export default function AssistedTouchPage() {
                 styles.switchTriggerBtn,
                 pressed && styles.switchTriggerBtnPressed,
               ]}
-              onPress={() => handleSelectAction(ACTIONS[scanIndex].label)}
+              onPress={() => handleSelectAction(ACTIONS[scanIndex])}
               accessibilityRole="button"
-              accessibilityLabel={`Switch Trigger: Select ${ACTIONS[scanIndex].label}`}
+              accessibilityLabel={t.switchTriggerPrompt(activeScanLabel)}
             >
               <Text style={styles.switchTriggerEmoji}>🔴</Text>
               <Text style={styles.switchTriggerText}>
-                SWITCH TRIGGER — TAP OR PRESS SPACE TO SELECT ({ACTIONS[scanIndex].label.toUpperCase()})
+                {t.switchTriggerPrompt(activeScanLabel)}
               </Text>
             </Pressable>
           )}
@@ -236,12 +411,15 @@ export default function AssistedTouchPage() {
                 styles.switchTriggerBtn,
                 pressed && styles.switchTriggerBtnPressed,
               ]}
-              onPress={() => handleSelectAction(ACTIONS[scanIndex].label)}
+              onPress={() => handleSelectAction(ACTIONS[scanIndex])}
               accessibilityRole="button"
-              accessibilityLabel={`Single switch trigger: Select ${ACTIONS[scanIndex].label}`}
+              accessibilityLabel={t.switchTriggerTap(
+                ACTIONS[scanIndex].emoji,
+                activeScanLabel
+              )}
             >
               <Text style={styles.switchTriggerText}>
-                🔘 TAP HERE TO SELECT: {ACTIONS[scanIndex].emoji} {ACTIONS[scanIndex].label.toUpperCase()}
+                {t.switchTriggerTap(ACTIONS[scanIndex].emoji, activeScanLabel)}
               </Text>
             </Pressable>
           )}
@@ -249,7 +427,7 @@ export default function AssistedTouchPage() {
           {/* ── Last action feedback ─────────────────────────────────────── */}
           {lastPressed && (
             <View style={styles.feedbackBar} accessibilityLiveRegion="polite">
-              <Text style={styles.feedbackText}>✅ Selected: {lastPressed}</Text>
+              <Text style={styles.feedbackText}>{t.selectedFeedback(lastPressed)}</Text>
             </View>
           )}
 
@@ -260,16 +438,20 @@ export default function AssistedTouchPage() {
             accessibilityLabel="Interaction options"
           >
             {ACTIONS.map((action, index) => {
+              const actionLabel = action.localLabel[lang] || action.localLabel.en;
               const isNeutral = action.variant === 'neutral';
-              const isScanHighlighted = settings.switchScanning && scanIndex === index;
+              const isScanHighlighted =
+                settings.switchScanning && scanIndex === index;
               const isDwellActive = dwellActiveId === action.id;
 
-              const AnimatedView = isScanHighlighted ? Animated.View : View;
-
               return (
-                <AnimatedView
+                <Animated.View
                   key={action.id}
-                  style={isScanHighlighted ? { transform: [{ scale: scanPulseAnim }] } : undefined}
+                  style={
+                    isScanHighlighted
+                      ? { transform: [{ scale: scanPulseAnim }] }
+                      : undefined
+                  }
                 >
                   <Pressable
                     style={({ pressed }: any) => [
@@ -283,24 +465,29 @@ export default function AssistedTouchPage() {
                       isScanHighlighted && styles.bigBtnScanHighlighted,
                       isDwellActive && styles.bigBtnDwellActive,
                     ]}
-                    onPress={() => handleSelectAction(action.label)}
+                    onPress={() => handleSelectAction(action)}
                     onPressIn={() => handlePointerEnter(action)}
                     onPressOut={handlePointerLeave}
                     onPointerEnter={() => handlePointerEnter(action)}
                     onPointerLeave={handlePointerLeave}
                     accessibilityRole="button"
-                    accessibilityLabel={action.label}
+                    accessibilityLabel={actionLabel}
                     testID={`easy-tap-${action.id}`}
                   >
                     {/* Dwell progress fill bar */}
                     {isDwellActive && (
-                      <View style={[styles.dwellProgressBar, { width: `${dwellProgress}%` }]} />
+                      <View
+                        style={[
+                          styles.dwellProgressBar,
+                          { width: `${dwellProgress}%` },
+                        ]}
+                      />
                     )}
 
                     {/* Switch Scan Badge */}
                     {isScanHighlighted && (
                       <View style={styles.scanBadge}>
-                        <Text style={styles.scanBadgeText}>TARGET</Text>
+                        <Text style={styles.scanBadgeText}>{t.targetBadge}</Text>
                       </View>
                     )}
 
@@ -308,53 +495,69 @@ export default function AssistedTouchPage() {
                     <Text
                       style={[
                         styles.bigBtnLabel,
-                        isNeutral && !settings.highContrast && styles.bigBtnLabelDark,
+                        isNeutral &&
+                          !settings.highContrast &&
+                          styles.bigBtnLabelDark,
                         settings.highContrast && styles.bigBtnLabelHC,
                       ]}
                     >
-                      {action.label}
+                      {actionLabel}
                     </Text>
 
                     {/* Dwell Timer Indicator text */}
                     {isDwellActive && (
-                      <Text style={styles.dwellText}>{Math.round(dwellProgress)}%</Text>
+                      <Text style={styles.dwellText}>
+                        {Math.round(dwellProgress)}%
+                      </Text>
                     )}
                   </Pressable>
-                </AnimatedView>
+                </Animated.View>
               );
             })}
           </View>
 
           {/* ── Explanation ────────────────────────────────────────────── */}
-          <View style={styles.explainCard}>
-            <Text style={styles.explainTitle}>Motor Accessibility Controls</Text>
-            <Text style={styles.explainText}>
-              Designed for users with motor tremors or limited dexterity. Enable <Text style={{ fontWeight: 'bold' }}>Dwell Selection</Text> to select by holding your pointer, or <Text style={{ fontWeight: 'bold' }}>Switch Scanning</Text> to cycle options and trigger with any single press or key.
-            </Text>
+          <View style={styles.explainBox}>
+            <Text style={styles.explainTitle}>{t.explainTitle}</Text>
+            <Text style={styles.explainText}>{t.explainText}</Text>
           </View>
 
           {/* ── Settings Toggles ────────────────────────────────────────── */}
           <View style={styles.settingsSection}>
-            <Text style={styles.settingsHeading}>Interaction Settings</Text>
-            {SETTINGS.map((setting) => (
-              <View key={setting.key} style={styles.settingRow}>
-                <View style={styles.settingInfo}>
-                  <View style={styles.settingLabelRow}>
-                    <Text style={styles.settingEmoji}>{setting.emoji}</Text>
-                    <Text style={styles.settingLabel}>{setting.label}</Text>
+            <Text style={styles.settingsHeading}>{t.settingsHeading}</Text>
+            {SETTINGS.map((setting) => {
+              const settingLabel = setting.localLabel[lang] || setting.localLabel.en;
+              const settingDesc =
+                setting.localDescription[lang] ||
+                setting.localDescription.en;
+
+              return (
+                <View key={setting.key} style={styles.settingRow}>
+                  <View style={styles.settingInfo}>
+                    <View style={styles.settingLabelRow}>
+                      <Text style={styles.settingEmoji}>{setting.emoji}</Text>
+                      <Text style={styles.settingLabel}>{settingLabel}</Text>
+                    </View>
+                    <Text style={styles.settingDesc}>{settingDesc}</Text>
                   </View>
-                  <Text style={styles.settingDesc}>{setting.description}</Text>
+                  <Switch
+                    value={settings[setting.key]}
+                    onValueChange={() => toggleSetting(setting.key)}
+                    thumbColor={
+                      settings[setting.key]
+                        ? AccessColors.teal
+                        : AccessColors.textTertiary
+                    }
+                    trackColor={{
+                      false: AccessColors.border,
+                      true: AccessColors.tealBorder + '80',
+                    }}
+                    accessibilityLabel={settingLabel}
+                    accessibilityRole="switch"
+                  />
                 </View>
-                <Switch
-                  value={settings[setting.key]}
-                  onValueChange={() => toggleSetting(setting.key)}
-                  thumbColor={settings[setting.key] ? AccessColors.teal : AccessColors.textTertiary}
-                  trackColor={{ false: AccessColors.border, true: AccessColors.tealBorder + '80' }}
-                  accessibilityLabel={setting.label}
-                  accessibilityRole="switch"
-                />
-              </View>
-            ))}
+              );
+            })}
           </View>
         </ScrollView>
       </View>
@@ -364,7 +567,9 @@ export default function AssistedTouchPage() {
 
 // ── Styles ────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: AccessColors.background },
   safeAreaHC: { backgroundColor: '#000000' },
   screen: { flex: 1 },
@@ -401,7 +606,7 @@ const styles = StyleSheet.create({
   switchTriggerEmoji: { fontSize: 24 },
   switchTriggerText: {
     fontSize: AccessFontSize.base,
-    fontWeight: AccessFontWeight.bold,
+    fontFamily: AccessFontFamily.bold,
     color: '#332200',
     textAlign: 'center',
   },
@@ -409,61 +614,72 @@ const styles = StyleSheet.create({
   // Feedback
   feedbackBar: {
     alignSelf: 'stretch',
-    backgroundColor: AccessColors.statusGreenBg,
+    backgroundColor: AccessColors.cardSelected,
     borderWidth: 1.5,
-    borderColor: AccessColors.statusGreen,
-    borderRadius: AccessRadius.sm,
-    padding: AccessSpacing.md,
+    borderColor: AccessColors.teal,
+    borderRadius: AccessRadius.md,
+    paddingVertical: AccessSpacing.md,
+    paddingHorizontal: AccessSpacing.lg,
     alignItems: 'center',
   },
   feedbackText: {
     fontSize: AccessFontSize.md,
-    fontWeight: AccessFontWeight.semibold,
-    color: '#1A6B34',
+    fontFamily: AccessFontFamily.semibold,
+    color: AccessColors.tealDark,
   },
 
-  // Big buttons
+  // Big Action Buttons
   buttonSection: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: AccessSpacing.lg,
+    gap: AccessSpacing.md,
     justifyContent: 'center',
+    width: '100%',
   },
   bigBtn: {
     borderRadius: AccessRadius.lg,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: AccessSpacing.md,
     gap: AccessSpacing.xs,
     position: 'relative',
     overflow: 'hidden',
-    ...Platform.select({ web: { outlineStyle: 'none' }, default: {} }),
+    ...AccessShadow.sm,
+  },
+  bigBtnPrimary: {
+    backgroundColor: AccessColors.navy,
+  },
+  bigBtnDanger: {
+    backgroundColor: '#991B1B',
+  },
+  bigBtnNeutral: {
+    backgroundColor: AccessColors.cardHover,
+    borderWidth: 1.5,
+    borderColor: AccessColors.border,
   },
   bigBtnPressed: { opacity: 0.75, transform: [{ scale: 0.96 }] },
   bigBtnScanHighlighted: {
     borderWidth: 4,
-    borderColor: '#FFD700',
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 12,
-    elevation: 8,
+    borderColor: AccessColors.teal,
+    backgroundColor: AccessColors.cardHover,
   },
   bigBtnDwellActive: {
-    borderColor: AccessColors.teal,
+    opacity: 0.9,
   },
   dwellProgressBar: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
-    top: 0,
-    backgroundColor: 'rgba(13, 148, 136, 0.35)',
+    right: 0,
+    bottom: 0,
+    height: 6,
+    backgroundColor: AccessColors.teal,
   },
   dwellText: {
     position: 'absolute',
     bottom: 4,
     fontSize: 11,
-    fontWeight: 'bold',
+    fontFamily: AccessFontFamily.bold,
     color: AccessColors.teal,
   },
   scanBadge: {
@@ -476,14 +692,14 @@ const styles = StyleSheet.create({
   },
   scanBadgeText: {
     fontSize: 9,
-    fontWeight: 'bold',
+    fontFamily: AccessFontFamily.bold,
     color: '#332200',
   },
 
   bigBtnEmoji: { fontSize: 32 },
   bigBtnLabel: {
     fontSize: AccessFontSize.md,
-    fontWeight: AccessFontWeight.bold,
+    fontFamily: AccessFontFamily.bold,
     color: AccessColors.textOnDark,
     textAlign: 'center',
   },
@@ -500,13 +716,22 @@ const styles = StyleSheet.create({
     padding: AccessSpacing.xl,
     gap: AccessSpacing.xs,
   },
+  explainBox: {
+    backgroundColor: AccessColors.cardDefault,
+    borderWidth: 1,
+    borderColor: AccessColors.border,
+    borderRadius: AccessRadius.md,
+    padding: AccessSpacing.xl,
+    gap: AccessSpacing.xs,
+  },
   explainTitle: {
     fontSize: AccessFontSize.md,
-    fontWeight: AccessFontWeight.bold,
+    fontFamily: AccessFontFamily.bold,
     color: AccessColors.textPrimary,
   },
   explainText: {
     fontSize: AccessFontSize.base,
+    fontFamily: AccessFontFamily.regular,
     color: AccessColors.textSecondary,
     lineHeight: 24,
   },
@@ -518,7 +743,7 @@ const styles = StyleSheet.create({
   },
   settingsHeading: {
     fontSize: AccessFontSize.md,
-    fontWeight: AccessFontWeight.semibold,
+    fontFamily: AccessFontFamily.semibold,
     color: AccessColors.textPrimary,
   },
   settingRow: {
@@ -538,12 +763,14 @@ const styles = StyleSheet.create({
   settingEmoji: { fontSize: 18 },
   settingLabel: {
     fontSize: AccessFontSize.base,
-    fontWeight: AccessFontWeight.medium,
+    fontFamily: AccessFontFamily.medium,
     color: AccessColors.textPrimary,
   },
   settingDesc: {
     fontSize: AccessFontSize.sm,
+    fontFamily: AccessFontFamily.regular,
     color: AccessColors.textSecondary,
     lineHeight: 18,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

@@ -6,13 +6,7 @@
 
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
-import {
-  AccessColors,
-  AccessSpacing,
-  AccessRadius,
-  AccessFontSize,
-  AccessFontWeight,
-} from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
 import { StatusBadge, type StatusVariant } from './StatusBadge';
 
 // â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -34,6 +28,7 @@ interface BenefitCardProps {
 // â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function BenefitCard({ item, onViewDetails }: BenefitCardProps) {
+  const styles = useStyles();
   return (
     <View style={styles.card} accessibilityRole="none">
       <View style={styles.header}>
@@ -60,7 +55,9 @@ export function BenefitCard({ item, onViewDetails }: BenefitCardProps) {
 
 // â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   card: {
     backgroundColor: AccessColors.cardDefault,
     borderWidth: 1,
@@ -121,6 +118,7 @@ const styles = StyleSheet.create({
     fontWeight: AccessFontWeight.medium,
     color: AccessColors.navy,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}
 
 

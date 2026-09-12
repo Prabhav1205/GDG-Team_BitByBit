@@ -1,3 +1,5 @@
+import { AccessColors, AccessSpacing, AccessShadow, AccessAnimation, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius } from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
 /**
  * AssistanceBar — footer utility area for the accessibility kiosk.
  *
@@ -15,29 +17,32 @@ import {
   Animated,
   useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
-import {
-  AccessColors,
-  AccessSpacing,
-  AccessFontSize,
-  AccessFontWeight,
-  AccessRadius,
-  AccessShadow,
-} from '@/constants/access-theme';
 import { KioskIcon } from './KioskIcon';
+import { LanguageSelectorModal } from './LanguageSelectorModal';
+import { useSession } from '@/context/SessionContext';
+import { LANGUAGES, UI_STRINGS } from '@/constants/i18n';
 
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function AssistanceBar() {
+  const styles = useStyles();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isNarrow = width < 600;
+  const { session } = useSession();
+  const currentLang = LANGUAGES[session.language] ?? LANGUAGES.en;
+  const ui = UI_STRINGS[session.language] ?? UI_STRINGS.en;
 
   const [staffRequested, setStaffRequested] = useState(false);
   const [staffHovered, setStaffHovered] = useState(false);
   const [benefitsHovered, setBenefitsHovered] = useState(false);
   const [staffScaleAnim] = useState(() => new Animated.Value(1));
+  const [langModalVisible, setLangModalVisible] = useState(false);
 
   function handleRequestStaff() {
     if (staffRequested) return;
@@ -51,12 +56,16 @@ export function AssistanceBar() {
   }
 
   return (
-    <View style={styles.container} role="contentinfo">
+    <BlurView intensity={80} tint="light" style={styles.container} blurMethod="dimezisBlurView">
+      <LanguageSelectorModal
+        visible={langModalVisible}
+        onClose={() => setLangModalVisible(false)}
+      />
       <View style={styles.divider} />
 
       {isNarrow ? (
         /* ── NARROW / MOBILE layout ──────────────────────────────── */
-        <View style={styles.narrowInner}>
+        <View style={[styles.narrowInner, { paddingLeft: Math.max(AccessSpacing.md, insets.left), paddingRight: Math.max(AccessSpacing.md, insets.right), paddingBottom: Math.max(AccessSpacing.sm, insets.bottom) }]}>
           {/* Row 1: Staff + Benefits buttons */}
           <View style={styles.narrowButtonRow}>
             <Animated.View style={[styles.narrowBtnFlex, { transform: [{ scale: staffScaleAnim }] }]}>
@@ -71,8 +80,8 @@ export function AssistanceBar() {
                 accessibilityRole="button"
                 accessibilityLabel={
                   staffRequested
-                    ? 'Staff assistance requested.'
-                    : 'Request staff assistance'
+                    ? ui.staffNotified
+                    : ui.requestStaff
                 }
                 accessibilityState={{ busy: staffRequested }}
                 testID="request-staff"
@@ -86,7 +95,7 @@ export function AssistanceBar() {
                   style={[styles.staffBtnLabel, staffRequested && styles.staffBtnLabelActive]}
                   numberOfLines={1}
                 >
-                  {staffRequested ? 'Staff notified' : 'Request Staff'}
+                  {staffRequested ? ui.staffNotified : ui.requestStaff}
                 </Text>
               </Pressable>
             </Animated.View>
@@ -105,32 +114,33 @@ export function AssistanceBar() {
                 style={styles.benefitsBtn}
               >
                 <KioskIcon name="benefits" size={13} color="#FFFFFF" />
-                <Text style={styles.benefitsBtnLabel} numberOfLines={1}>Benefit Schemes</Text>
+                <Text style={styles.benefitsBtnLabel} numberOfLines={1}>{ui.benefitSchemes}</Text>
               </LinearGradient>
             </Pressable>
           </View>
 
           {/* Row 2: Language + Privacy */}
           <View style={styles.narrowBottomRow}>
-            <Text style={styles.privacyNotice}>🔒 Session is private and auto-cleared.</Text>
+            <Text style={styles.privacyNotice}>{ui.sessionPrivate}</Text>
             <Pressable
               style={styles.languageBtn}
+              onPress={() => setLangModalVisible(true)}
               accessibilityRole="button"
-              accessibilityLabel="Language: English. Tap to change."
+              accessibilityLabel={`Language: ${currentLang.name}. Tap to change.`}
               testID="language-selector"
             >
               <KioskIcon name="language" size={12} color={AccessColors.textTertiary} />
-              <Text style={styles.languageBtnLabel}>English</Text>
+              <Text style={styles.languageBtnLabel}>{currentLang.nativeName}</Text>
               <Text style={styles.languageCaret}>›</Text>
             </Pressable>
           </View>
         </View>
       ) : (
         /* ── WIDE / DESKTOP layout ───────────────────────────────── */
-        <View style={styles.inner}>
+        <View style={[styles.inner, { paddingLeft: Math.max(AccessSpacing.xl, insets.left), paddingRight: Math.max(AccessSpacing.xl, insets.right), paddingBottom: Math.max(AccessSpacing.md, insets.bottom) }]}>
           {/* LEFT: Assistance & Eligibility */}
           <View style={styles.left}>
-            <Text style={styles.assistanceLabel}>Need help?</Text>
+            <Text style={styles.assistanceLabel}>{ui.needHelp}</Text>
 
             <Animated.View style={{ transform: [{ scale: staffScaleAnim }] }}>
               <Pressable
@@ -146,8 +156,8 @@ export function AssistanceBar() {
                 accessibilityRole="button"
                 accessibilityLabel={
                   staffRequested
-                    ? 'Staff assistance requested. A member of staff will be with you shortly.'
-                    : 'Request staff assistance'
+                    ? ui.staffNotified
+                    : ui.requestStaff
                 }
                 accessibilityState={{ busy: staffRequested }}
                 testID="request-staff"
@@ -158,7 +168,7 @@ export function AssistanceBar() {
                   color={staffRequested ? AccessColors.statusGreen : '#FFFFFF'}
                 />
                 <Text style={[styles.staffBtnLabel, staffRequested && styles.staffBtnLabelActive]}>
-                  {staffRequested ? 'Staff notified — please wait' : 'Request staff assistance'}
+                  {staffRequested ? ui.staffNotified : ui.requestStaff}
                 </Text>
               </Pressable>
             </Animated.View>
@@ -183,7 +193,7 @@ export function AssistanceBar() {
                 style={[styles.benefitsBtn, benefitsHovered && { opacity: 0.92 }]}
               >
                 <KioskIcon name="benefits" size={14} color="#FFFFFF" />
-                <Text style={styles.benefitsBtnLabel}>Benefit Schemes</Text>
+                <Text style={styles.benefitsBtnLabel}>{ui.benefitSchemes}</Text>
                 <Text style={styles.benefitsArrow}>↗</Text>
               </LinearGradient>
             </Pressable>
@@ -193,30 +203,33 @@ export function AssistanceBar() {
           <View style={styles.right}>
             <View style={styles.languageRow}>
               <KioskIcon name="language" size={14} color={AccessColors.textTertiary} />
-              <Text style={styles.languagePrefix}>Language:</Text>
+              <Text style={styles.languagePrefix}>{ui.languageLabel}</Text>
               <Pressable
                 style={({ focused }: any) => [styles.languageBtn, focused && styles.languageBtnFocused]}
+                onPress={() => setLangModalVisible(true)}
                 accessibilityRole="button"
-                accessibilityLabel="Language: English. Tap to change."
+                accessibilityLabel={`Language: ${currentLang.name}. Tap to change.`}
                 testID="language-selector"
               >
-                <Text style={styles.languageBtnLabel}>English</Text>
+                <Text style={styles.languageBtnLabel}>{currentLang.nativeName}</Text>
                 <Text style={styles.languageCaret}>›</Text>
               </Pressable>
             </View>
-            <Text style={styles.privacyNotice}>🔒 Your session is private and auto-cleared.</Text>
+            <Text style={styles.privacyNotice}>{ui.sessionPrivate}</Text>
           </View>
         </View>
       )}
-    </View>
+    </BlurView>
   );
 }
 
 // ── Styles ─────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   container: {
-    backgroundColor: AccessColors.background,
+    backgroundColor: 'rgba(244, 243, 240, 0.75)', // AccessColors.background but transparent
   },
   divider: {
     height: 1,
@@ -246,7 +259,7 @@ const styles = StyleSheet.create({
   },
   assistanceLabel: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.medium,
+    fontFamily: AccessFontFamily.medium,
     color: AccessColors.textSecondary,
   },
 
@@ -303,7 +316,7 @@ const styles = StyleSheet.create({
   } as any,
   staffBtnLabel: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.semibold,
+    fontFamily: AccessFontFamily.semibold,
     color: '#FFFFFF',
   },
   staffBtnLabelActive: {
@@ -326,7 +339,7 @@ const styles = StyleSheet.create({
   },
   benefitsBtnLabel: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.semibold,
+    fontFamily: AccessFontFamily.semibold,
     color: '#FFFFFF',
   },
   benefitsArrow: {
@@ -342,6 +355,7 @@ const styles = StyleSheet.create({
   },
   languagePrefix: {
     fontSize: AccessFontSize.xs,
+    fontFamily: AccessFontFamily.regular,
     color: AccessColors.textTertiary,
   },
   languageBtn: {
@@ -362,7 +376,7 @@ const styles = StyleSheet.create({
   } as any,
   languageBtnLabel: {
     fontSize: AccessFontSize.xs,
-    fontWeight: AccessFontWeight.medium,
+    fontFamily: AccessFontFamily.medium,
     color: AccessColors.textPrimary,
   },
   languageCaret: {
@@ -371,7 +385,9 @@ const styles = StyleSheet.create({
   },
   privacyNotice: {
     fontSize: AccessFontSize.xs,
+    fontFamily: AccessFontFamily.regular,
     color: AccessColors.textTertiary,
     textAlign: 'right',
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

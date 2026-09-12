@@ -2,106 +2,220 @@
   "institutions": [
     {
       "id": "general",
-      "name": "General Kiosk",
+      "name": { "en": "General Kiosk", "hi": "सामान्य कियोस्क", "mr": "सामान्य कियोस्क" },
       "icon": "info",
       "description": "Common kiosk inquiries and general assistance phrases",
       "categories": [
         {
-          "name": "Common Questions",
-          "phrases": [
-            "Where is the main service counter?",
-            "I need assistance filling out this form.",
-            "What documents are required?",
-            "How long is the current waiting time?",
-            "Where can I find the restrooms?"
-          ]
+          "name": { "en": "Common Questions", "hi": "सामान्य प्रश्न", "mr": "सामान्य प्रश्न" },
+          "phrases": {
+            "en": [
+              "Where is the main service counter?",
+              "I need assistance filling out this form.",
+              "What documents are required?",
+              "How long is the current waiting time?",
+              "Where can I find the restrooms?"
+            ],
+            "hi": [
+              "मुख्य सेवा काउंटर कहाँ है?",
+              "मुझे यह फ़ॉर्म भरने में सहायता चाहिए।",
+              "कौन से दस्तावेज़ आवश्यक हैं?",
+              "वर्तमान प्रतीक्षा समय कितना है?",
+              "शौचालय कहाँ है?"
+            ],
+            "mr": [
+              "मुख्य सेवा काउंटर कुठे आहे?",
+              "मला हा फॉर्म भरण्यात मदत हवी आहे.",
+              "कोणती कागदपत्रे आवश्यक आहेत?",
+              "सध्याची प्रतीक्षा वेळ किती आहे?",
+              "स्वच्छतागृह कुठे आहे?"
+            ]
+          }
         },
         {
-          "name": "Quick Responses",
-          "phrases": [
-            "Yes, thank you.",
-            "No, I need more help.",
-            "Please repeat that.",
-            "I have an appointment."
-          ]
+          "name": { "en": "Quick Responses", "hi": "त्वरित जवाब", "mr": "त्वरित उत्तरे" },
+          "phrases": {
+            "en": [
+              "Yes, thank you.",
+              "No, I need more help.",
+              "Please repeat that.",
+              "I have an appointment."
+            ],
+            "hi": [
+              "हाँ, धन्यवाद।",
+              "नहीं, मुझे और मदद चाहिए।",
+              "कृपया दोहराएं।",
+              "मेरी अपॉइंटमेंट है।"
+            ],
+            "mr": [
+              "होय, धन्यवाद.",
+              "नाही, मला अधिक मदत हवी आहे.",
+              "कृपया पुन्हा सांगा.",
+              "माझी अपॉइंटमेंट आहे."
+            ]
+          }
         }
       ]
     },
     {
       "id": "bank",
-      "name": "Bank & Financial",
+      "name": { "en": "Bank & Financial", "hi": "बैंक और वित्त", "mr": "बँक आणि वित्त" },
       "icon": "card",
       "description": "Phrases for banking, accounts, deposits, and cash services",
       "categories": [
         {
-          "name": "Accounts & Deposit",
-          "phrases": [
-            "I would like to open a new account.",
-            "I want to deposit cash into my account.",
-            "I need to withdraw money.",
-            "Can I update my phone number and address?",
-            "I need a printout of my account statement."
-          ]
+          "name": { "en": "Accounts & Deposit", "hi": "खाता और जमा", "mr": "खाते आणि ठेव" },
+          "phrases": {
+            "en": [
+              "I would like to open a new account.",
+              "I want to deposit cash into my account.",
+              "I need to withdraw money.",
+              "Can I update my phone number and address?",
+              "I need a printout of my account statement."
+            ],
+            "hi": [
+              "मुझे नया खाता खोलना है।",
+              "मैं अपने खाते में नकद जमा करना चाहता हूँ।",
+              "मुझे पैसे निकालने हैं।",
+              "क्या मैं अपना फ़ोन नंबर और पता अपडेट कर सकता हूँ?",
+              "मुझे अपने खाते का विवरण चाहिए।"
+            ],
+            "mr": [
+              "मला नवीन खाते उघडायचे आहे.",
+              "मला माझ्या खात्यात रोख जमा करायची आहे.",
+              "मला पैसे काढायचे आहेत.",
+              "मी माझा फोन नंबर आणि पत्ता अपडेट करू शकतो का?",
+              "मला माझ्या खात्याचे विवरण हवे आहे."
+            ]
+          }
         },
         {
-          "name": "Cards & Loans",
-          "phrases": [
-            "My debit card is blocked.",
-            "I want to apply for a new credit card.",
-            "I have a query regarding a home loan.",
-            "Where is the ATM machine located?"
-          ]
+          "name": { "en": "Cards & Loans", "hi": "कार्ड और ऋण", "mr": "कार्ड आणि कर्ज" },
+          "phrases": {
+            "en": [
+              "My debit card is blocked.",
+              "I want to apply for a new credit card.",
+              "I have a query regarding a home loan.",
+              "Where is the ATM machine located?"
+            ],
+            "hi": [
+              "मेरा डेबिट कार्ड ब्लॉक हो गया है।",
+              "मैं नया क्रेडिट कार्ड के लिए आवेदन करना चाहता हूँ।",
+              "मुझे होम लोन के बारे में प्रश्न है।",
+              "ATM मशीन कहाँ है?"
+            ],
+            "mr": [
+              "माझे डेबिट कार्ड ब्लॉक झाले आहे.",
+              "मला नव्या क्रेडिट कार्डसाठी अर्ज करायचा आहे.",
+              "मला होम लोनबद्दल प्रश्न आहे.",
+              "ATM मशीन कुठे आहे?"
+            ]
+          }
         }
       ]
     },
     {
       "id": "hospital",
-      "name": "Hospital & Clinic",
+      "name": { "en": "Hospital & Clinic", "hi": "अस्पताल और क्लिनिक", "mr": "रुग्णालय आणि दवाखाना" },
       "icon": "health",
       "description": "Phrases for medical registration, appointments, and emergency",
       "categories": [
         {
-          "name": "Registration & OPD",
-          "phrases": [
-            "I have a prior doctor appointment.",
-            "Where is the registration OPD counter?",
-            "I need to collect my laboratory test report.",
-            "Where is the pharmacy counter?"
-          ]
+          "name": { "en": "Registration & OPD", "hi": "पंजीकरण और OPD", "mr": "नोंदणी आणि OPD" },
+          "phrases": {
+            "en": [
+              "I have a prior doctor appointment.",
+              "Where is the registration OPD counter?",
+              "I need to collect my laboratory test report.",
+              "Where is the pharmacy counter?"
+            ],
+            "hi": [
+              "मेरी डॉक्टर की पूर्व अपॉइंटमेंट है।",
+              "पंजीकरण OPD काउंटर कहाँ है?",
+              "मुझे अपनी लैब रिपोर्ट लेनी है।",
+              "फार्मेसी काउंटर कहाँ है?"
+            ],
+            "mr": [
+              "माझी डॉक्टरांची आधीची अपॉइंटमेंट आहे.",
+              "नोंदणी OPD काउंटर कुठे आहे?",
+              "मला माझा लॅब टेस्ट रिपोर्ट घ्यायचा आहे.",
+              "फार्मसी काउंटर कुठे आहे?"
+            ]
+          }
         },
         {
-          "name": "Medical Assistance",
-          "phrases": [
-            "I need emergency medical assistance.",
-            "Where is the radiology / X-Ray department?",
-            "Can someone guide me to the wheelchair ramp?",
-            "I am feeling unwell, please help."
-          ]
+          "name": { "en": "Medical Assistance", "hi": "चिकित्सा सहायता", "mr": "वैद्यकीय सहाय्य" },
+          "phrases": {
+            "en": [
+              "I need emergency medical assistance.",
+              "Where is the radiology / X-Ray department?",
+              "Can someone guide me to the wheelchair ramp?",
+              "I am feeling unwell, please help."
+            ],
+            "hi": [
+              "मुझे आपातकालीन चिकित्सा सहायता चाहिए।",
+              "रेडियोलॉजी / X-Ray विभाग कहाँ है?",
+              "क्या कोई मुझे व्हीलचेयर रैंप तक ले जा सकता है?",
+              "मैं अस्वस्थ महसूस कर रहा हूँ, कृपया मदद करें।"
+            ],
+            "mr": [
+              "मला आपत्कालीन वैद्यकीय मदत हवी आहे.",
+              "रेडिओलॉजी / X-Ray विभाग कुठे आहे?",
+              "कोणी मला व्हीलचेअर रॅम्पकडे नेऊ शकते का?",
+              "मला बरं वाटत नाही, कृपया मदत करा."
+            ]
+          }
         }
       ]
     },
     {
       "id": "govt",
-      "name": "Govt & Municipal",
+      "name": { "en": "Govt & Municipal", "hi": "सरकार और नगरपालिका", "mr": "सरकार आणि महानगरपालिका" },
       "icon": "doc",
       "description": "Phrases for government certificates, forms, and public services",
       "categories": [
         {
-          "name": "Applications & Certificates",
-          "phrases": [
-            "I am here to apply for an official certificate.",
-            "Where do I submit my completed application form?",
-            "I need to pay municipal service fees.",
-            "Where do I get my token number for verification?"
-          ]
+          "name": { "en": "Applications & Certificates", "hi": "आवेदन और प्रमाणपत्र", "mr": "अर्ज आणि प्रमाणपत्रे" },
+          "phrases": {
+            "en": [
+              "I am here to apply for an official certificate.",
+              "Where do I submit my completed application form?",
+              "I need to pay municipal service fees.",
+              "Where do I get my token number for verification?"
+            ],
+            "hi": [
+              "मैं आधिकारिक प्रमाणपत्र के लिए आवेदन करने आया हूँ।",
+              "मैं अपना भरा हुआ आवेदन पत्र कहाँ जमा करूँ?",
+              "मुझे नगरपालिका सेवा शुल्क का भुगतान करना है।",
+              "सत्यापन के लिए टोकन नंबर कहाँ मिलेगा?"
+            ],
+            "mr": [
+              "मी अधिकृत प्रमाणपत्रासाठी अर्ज करायला आलो आहे.",
+              "माझा पूर्ण अर्ज मी कुठे जमा करायचा?",
+              "मला महानगरपालिका सेवा शुल्क भरायचे आहे.",
+              "पडताळणीसाठी टोकन नंबर कुठे मिळेल?"
+            ]
+          }
         },
         {
-          "name": "Status & Verification",
-          "phrases": [
-            "I want to check my application status.",
-            "Which counter handles document verification?",
-            "Is there a helpdesk for senior citizens?"
-          ]
+          "name": { "en": "Status & Verification", "hi": "स्थिति और सत्यापन", "mr": "स्थिती आणि पडताळणी" },
+          "phrases": {
+            "en": [
+              "I want to check my application status.",
+              "Which counter handles document verification?",
+              "Is there a helpdesk for senior citizens?"
+            ],
+            "hi": [
+              "मैं अपने आवेदन की स्थिति जांचना चाहता हूँ।",
+              "दस्तावेज़ सत्यापन कौन से काउंटर पर होता है?",
+              "क्या वरिष्ठ नागरिकों के लिए हेल्पडेस्क है?"
+            ],
+            "mr": [
+              "मला माझ्या अर्जाची स्थिती तपासायची आहे.",
+              "कागदपत्र पडताळणी कोणत्या काउंटरवर होते?",
+              "ज्येष्ठ नागरिकांसाठी हेल्पडेस्क आहे का?"
+            ]
+          }
         }
       ]
     }

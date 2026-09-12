@@ -6,6 +6,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { supabase } from '@/services/supabase-schemes';
+import { type LangCode, toSafeLangCode } from '@/constants/i18n';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -61,8 +62,8 @@ export interface SessionState {
   communicationMode: CommunicationMode;
   /** The institution type selected by the user. */
   institution: InstitutionType;
-  /** ISO 639-1 language code, e.g. "en". */
-  language: string;
+  /** Language code: 'en' | 'hi' | 'mr' */
+  language: LangCode;
   /** ISO 8601 timestamp of when this session began. */
   startedAt: string;
   /** Global accessibility preferences */
@@ -83,7 +84,7 @@ interface SessionContextValue {
   session: SessionState;
   setMode: (mode: CommunicationMode) => void;
   setInstitution: (institution: InstitutionType) => void;
-  setLanguage: (lang: string) => void;
+  setLanguage: (lang: LangCode) => void;
   updateAccessibility: (key: keyof AccessibilitySettings, value?: boolean) => void;
   /** Broadcast citizen input live to staff dashboard */
   broadcastTranslation: (text: string, modeLabel: string, confidence?: number) => void;
@@ -127,7 +128,7 @@ function createInitialSession(): SessionState {
     sessionId: generateSessionId(),
     communicationMode: null,
     institution: 'bank',
-    language: 'en',
+    language: 'en' as LangCode,
     startedAt: now,
     accessibility: DEFAULT_A11Y,
     liveTranslations: [
@@ -271,8 +272,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const setInstitution = (institution: InstitutionType) =>
     syncState((prev) => ({ ...prev, institution }));
 
-  const setLanguage = (lang: string) =>
-    syncState((prev) => ({ ...prev, language: lang }));
+  const setLanguage = (lang: LangCode) =>
+    syncState((prev) => ({ ...prev, language: toSafeLangCode(lang) }));
 
   const updateAccessibility = (key: keyof AccessibilitySettings, value?: boolean) =>
     syncState((prev) => ({
@@ -384,7 +385,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const clearSession = () => syncState(createInitialSession);
+  const clearSession = () =>
+    syncState((prev) => {
+      const initial = createInitialSession();
+      return {
+        ...initial,
+        language: prev.language,
+        institution: prev.institution,
+        accessibility: prev.accessibility,
+      };
+    });
 
   return (
     <SessionContext.Provider

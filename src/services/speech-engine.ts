@@ -48,7 +48,7 @@ class SpeechEngineService {
       Speech.speak(text, {
         rate: options.rate ?? 1.0,
         pitch: options.pitch ?? 1.0,
-        language: options.lang ?? 'en-US',
+        language: options.lang ?? 'en-IN',
         onDone: options.onEnd,
         onError: (err) => {
           console.warn('[SpeechEngine Expo-Speech Error]:', err);
@@ -92,26 +92,31 @@ class SpeechEngineService {
       this.recognition = new SpeechRecognition();
       this.recognition.continuous = options.continuous ?? true;
       this.recognition.interimResults = true;
-      this.recognition.lang = options.lang ?? 'en-US';
+      this.recognition.lang = options.lang ?? 'en-IN';
 
       this.recognition.onresult = (event: any) => {
         let interimTranscript = '';
         let finalTranscript = '';
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
+          const result = event.results[i];
+          if (result.isFinal) {
+            finalTranscript += result[0].transcript;
           } else {
-            interimTranscript += event.results[i][0].transcript;
+            interimTranscript += result[0].transcript;
           }
         }
 
-        const currentText = finalTranscript || interimTranscript;
-        onResult(currentText.trim(), Boolean(finalTranscript));
+        const combined = (finalTranscript || interimTranscript).trim();
+        if (combined) {
+          onResult(combined, Boolean(finalTranscript));
+        }
       };
 
       this.recognition.onerror = (event: any) => {
-        if (event.error !== 'no-speech') {
+        if (event.error === 'not-allowed') {
+          onError?.('microphone-permission-denied');
+        } else if (event.error !== 'no-speech') {
           onError?.(event.error);
         }
       };

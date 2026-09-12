@@ -16,18 +16,17 @@ import { router } from 'expo-router';
 import { ModeCard } from './ModeCard';
 import { useSession, type CommunicationMode } from '@/context/SessionContext';
 import { useAudioNav } from '@/context/AudioNavContext';
-import {
-  AccessSpacing,
-} from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
+import { UI_STRINGS } from '@/constants/i18n';
 
 // ── Mode definitions ─────────────────────────────────────────────────────
 
-const MODES = [
+const getModes = (ui: typeof UI_STRINGS.en) => [
   {
     id: 'sign' as CommunicationMode,
     iconName: 'sign' as const,
-    title: 'Sign Language',
-    description: 'Communicate using sign language',
+    title: ui.modeSignTitle ?? 'Sign Language',
+    description: ui.modeSignDesc ?? 'Communicate using sign language',
     route: '/sign' as const,
     testID: 'mode-sign',
     shortcutNumber: 1,
@@ -35,8 +34,8 @@ const MODES = [
   {
     id: 'voice' as CommunicationMode,
     iconName: 'voice' as const,
-    title: 'Voice',
-    description: 'Speak naturally using your voice',
+    title: ui.modeVoiceTitle ?? 'Voice',
+    description: ui.modeVoiceDesc ?? 'Speak naturally using your voice',
     route: '/voice' as const,
     testID: 'mode-voice',
     shortcutNumber: 2,
@@ -44,8 +43,8 @@ const MODES = [
   {
     id: 'text' as CommunicationMode,
     iconName: 'text' as const,
-    title: 'Text',
-    description: 'Type what you need to communicate',
+    title: ui.modeTextTitle ?? 'Text',
+    description: ui.modeTextDesc ?? 'Type what you need to communicate',
     route: '/text' as const,
     testID: 'mode-text',
     shortcutNumber: 3,
@@ -53,8 +52,8 @@ const MODES = [
   {
     id: 'assisted-touch' as CommunicationMode,
     iconName: 'touch' as const,
-    title: 'Assisted Touch',
-    description: 'Use simplified controls with larger touch targets',
+    title: ui.modeAssistedTitle ?? 'Assisted Touch',
+    description: ui.modeAssistedDesc ?? 'Use simplified controls with larger touch targets',
     route: '/assisted-touch' as const,
     testID: 'mode-assisted-touch',
     shortcutNumber: 4,
@@ -64,9 +63,12 @@ const MODES = [
 // ── Component ─────────────────────────────────────────────────────────────
 
 export function ModeSelector() {
+  const styles = useStyles();
   const { width } = useWindowDimensions();
   const { session, setMode } = useSession();
   const { announce } = useAudioNav();
+  const ui = UI_STRINGS[session.language] ?? UI_STRINGS.en;
+  const modes = getModes(ui);
 
   const isNarrow = width < 700;
 
@@ -86,7 +88,7 @@ export function ModeSelector() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['1', '2', '3', '4'].includes(e.key)) {
         const index = parseInt(e.key, 10) - 1;
-        const targetMode = MODES[index];
+        const targetMode = modes[index];
         if (targetMode) {
           handleSelect(targetMode.id, targetMode.route, targetMode.title);
         }
@@ -96,14 +98,14 @@ export function ModeSelector() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [modes]);
 
   // Chunk modes into rows of 2 for the 2-column layout
   const rows = isNarrow
-    ? MODES.map((m) => [m])
+    ? modes.map((m) => [m])
     : [
-        [MODES[0], MODES[1]],
-        [MODES[2], MODES[3]],
+        [modes[0], modes[1]],
+        [modes[2], modes[3]],
       ];
 
   return (
@@ -127,6 +129,7 @@ export function ModeSelector() {
               onSelect={() => handleSelect(mode.id, mode.route, mode.title)}
               shortcutNumber={mode.shortcutNumber}
               testID={mode.testID}
+              isNarrow={isNarrow}
             />
           ))}
         </View>
@@ -137,7 +140,9 @@ export function ModeSelector() {
 
 // ── Styles ────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   container: {
     width: '100%',
     maxWidth: 960,
@@ -157,4 +162,5 @@ const styles = StyleSheet.create({
   rowNarrow: {
     flexDirection: 'column',
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

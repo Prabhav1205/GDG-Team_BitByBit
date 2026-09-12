@@ -1,4 +1,5 @@
 import institutionData from '@/constants/institution-phrases.json';
+import { type LangCode } from '@/constants/i18n';
 
 export interface PhraseCategory {
   name: string;
@@ -13,29 +14,55 @@ export interface InstitutionConfig {
   categories: PhraseCategory[];
 }
 
+// ── Internal types matching the updated JSON structure ─────────────────────
+
+interface RawPhraseCategory {
+  name: Record<string, string>;
+  phrases: Record<string, string[]>;
+}
+
+interface RawInstitution {
+  id: string;
+  name: Record<string, string>;
+  icon: string;
+  description: string;
+  categories: RawPhraseCategory[];
+}
+
+// ── Service ────────────────────────────────────────────────────────────────
+
 export class PhraseService {
-  /** Get all available institution phrase configurations */
-  public static getInstitutions(): InstitutionConfig[] {
-    return institutionData.institutions;
-  }
-
-  /** Get specific institution configuration by ID */
-  public static getInstitutionById(id: string): InstitutionConfig {
-    const targetId = id === 'government' ? 'govt' : id;
-    const found = institutionData.institutions.find(
-      (inst) => inst.id === targetId || inst.id === id
+  /** Get all available institution phrase configurations for a given language */
+  public static getInstitutions(lang: LangCode = 'en'): InstitutionConfig[] {
+    return (institutionData.institutions as RawInstitution[]).map((inst) =>
+      PhraseService.toConfig(inst, lang)
     );
-    return found || institutionData.institutions[0];
   }
 
-  /** Search phrases matching query across categories */
-  public static searchPhrases(query: string, institutionId?: string): string[] {
+  /** Get specific institution configuration by ID, localized to the given language */
+  public static getInstitutionById(
+    id: string,
+    lang: LangCode = 'en'
+  ): InstitutionConfig {
+    const raw = (institutionData.institutions as RawInstitution[]).find(
+      (inst) => inst.id === id
+    );
+    const source = raw || (institutionData.institutions[0] as RawInstitution);
+    return PhraseService.toConfig(source, lang);
+  }
+
+  /** Search phrases matching query across categories (language-aware) */
+  public static searchPhrases(
+    query: string,
+    institutionId?: string,
+    lang: LangCode = 'en'
+  ): string[] {
     const q = query.toLowerCase().trim();
     if (!q) return [];
 
     const insts = institutionId
-      ? [this.getInstitutionById(institutionId)]
-      : this.getInstitutions();
+      ? [this.getInstitutionById(institutionId, lang)]
+      : this.getInstitutions(lang);
 
     const matches = new Set<string>();
     for (const inst of insts) {
@@ -48,5 +75,21 @@ export class PhraseService {
       }
     }
     return Array.from(matches);
+  }
+
+  // ── Private ──────────────────────────────────────────────────────────────
+
+  private static toConfig(raw: RawInstitution, lang: LangCode): InstitutionConfig {
+    const safeLang = (raw.name[lang] ? lang : 'en') as LangCode;
+    return {
+      id: raw.id,
+      name: raw.name[safeLang] ?? raw.name['en'] ?? raw.id,
+      icon: raw.icon,
+      description: raw.description,
+      categories: raw.categories.map((cat) => ({
+        name: cat.name[safeLang] ?? cat.name['en'] ?? '',
+        phrases: cat.phrases[safeLang] ?? cat.phrases['en'] ?? [],
+      })),
+    };
   }
 }

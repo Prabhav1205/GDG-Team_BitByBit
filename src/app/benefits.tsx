@@ -1,3 +1,5 @@
+import { AccessColors, AccessSpacing, AccessShadow, AccessAnimation } from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
 /**
  * /benefits â€” Services & Benefits page.
  *
@@ -20,13 +22,7 @@ import { AccessHeader } from '@/components/access/AccessHeader';
 import { PageHeader } from '@/components/access/PageHeader';
 import { BenefitCard, type BenefitItem } from '@/components/access/BenefitCard';
 import { KioskIcon } from '@/components/access/KioskIcon';
-import {
-  AccessColors,
-  AccessSpacing,
-  AccessRadius,
-  AccessFontSize,
-  AccessFontWeight,
-} from '@/constants/access-theme';
+
 
 // â”€â”€ Mock data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -105,6 +101,7 @@ const NEXT_STEPS = [
 // â”€â”€ Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function BenefitsPage() {
+  const styles = useStyles();
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
 
   const filtered = activeFilter === 'all'
@@ -214,7 +211,9 @@ export default function BenefitsPage() {
 
 // â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: AccessColors.background },
   screen: { flex: 1, backgroundColor: AccessColors.background },
   scroll: { flex: 1 },
@@ -355,6 +354,7 @@ const styles = StyleSheet.create({
     color: AccessColors.textSecondary,
     lineHeight: 20,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}
 
 

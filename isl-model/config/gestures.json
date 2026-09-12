@@ -1,73 +1,206 @@
 {
-  "version": "1.0.0",
-  "description": "Institutional Accessibility Kiosk - ISL Gesture Configuration",
+  "version": "1.1.0",
+  "description": "Institutional Accessibility Kiosk — ISL Gesture Configuration with Regional Variation Metadata",
   "unknown_label": "UNKNOWN",
+  "architecture_note": "ISL is a distinct language. 'localPhrase' provides the institutional response text in different spoken languages (en/hi/mr). Regional variants document regional signing differences within ISL itself.",
   "gestures": [
     {
       "id": "HELP",
       "phrase": "I need help.",
+      "language": "ISL",
+      "region": "All-India",
+      "variation": "standard_v1",
+      "confidence_threshold": 0.5,
+      "localPhrase": {
+        "en": "I need help.",
+        "hi": "मुझे मदद चाहिए।",
+        "mr": "मला मदत हवी आहे."
+      },
       "category": "assistance",
-      "description": "General call for kiosk assistance or staff support"
+      "description": "General call for kiosk assistance or staff support",
+      "signers": ["signer_01"],
+      "examples": 1,
+      "regional_variants": []
     },
     {
       "id": "YES",
       "phrase": "Yes.",
+      "language": "ISL",
+      "region": "All-India",
+      "variation": "standard_v1",
+      "confidence_threshold": 0.5,
+      "localPhrase": {
+        "en": "Yes.",
+        "hi": "हाँ।",
+        "mr": "होय."
+      },
       "category": "response",
-      "description": "Affirmative response"
+      "description": "Affirmative response",
+      "signers": ["signer_01"],
+      "examples": 1,
+      "regional_variants": []
     },
     {
       "id": "NO",
       "phrase": "No.",
+      "language": "ISL",
+      "region": "All-India",
+      "variation": "standard_v1",
+      "confidence_threshold": 0.5,
+      "localPhrase": {
+        "en": "No.",
+        "hi": "नहीं।",
+        "mr": "नाही."
+      },
       "category": "response",
-      "description": "Negative response"
+      "description": "Negative response",
+      "signers": ["signer_01"],
+      "examples": 1,
+      "regional_variants": []
     },
     {
       "id": "FORM",
       "phrase": "I need help with this form.",
+      "language": "ISL",
+      "region": "All-India",
+      "variation": "standard_v1",
+      "confidence_threshold": 0.5,
+      "localPhrase": {
+        "en": "I need help with this form.",
+        "hi": "मुझे इस फ़ॉर्म में मदद चाहिए।",
+        "mr": "मला या फॉर्ममध्ये मदत हवी आहे."
+      },
       "category": "service",
-      "description": "Assistance required with filling out an official or institutional form"
+      "description": "Assistance required with filling out an official or institutional form",
+      "signers": ["signer_01"],
+      "examples": 1,
+      "regional_variants": []
     },
     {
       "id": "MONEY",
       "phrase": "I have a query regarding cash or payment.",
+      "language": "ISL",
+      "region": "All-India",
+      "variation": "standard_v1",
+      "confidence_threshold": 0.5,
+      "localPhrase": {
+        "en": "I have a query regarding cash or payment.",
+        "hi": "मुझे नकद या भुगतान के बारे में प्रश्न है।",
+        "mr": "मला रोख किंवा पेमेंटबद्दल प्रश्न आहे."
+      },
       "category": "service",
-      "description": "Payment, fee, or banking inquiry"
+      "description": "Payment, fee, or banking inquiry",
+      "signers": ["signer_01"],
+      "examples": 1,
+      "regional_variants": []
     },
     {
       "id": "APPOINTMENT",
       "phrase": "I would like to check my appointment.",
+      "language": "ISL",
+      "region": "All-India",
+      "variation": "standard_v1",
+      "confidence_threshold": 0.5,
+      "localPhrase": {
+        "en": "I would like to check my appointment.",
+        "hi": "मैं अपनी अपॉइंटमेंट जांचना चाहता हूँ।",
+        "mr": "मला माझी अपॉइंटमेंट तपासायची आहे."
+      },
       "category": "service",
-      "description": "Checking or booking a scheduled time"
+      "description": "Checking or booking a scheduled time",
+      "signers": ["signer_01"],
+      "examples": 1,
+      "regional_variants": []
     },
     {
       "id": "ID",
       "phrase": "Here is my identity document.",
+      "language": "ISL",
+      "region": "All-India",
+      "variation": "standard_v1",
+      "confidence_threshold": 0.5,
+      "localPhrase": {
+        "en": "Here is my identity document.",
+        "hi": "यह मेरा पहचान दस्तावेज़ है।",
+        "mr": "हे माझे ओळखपत्र आहे."
+      },
       "category": "service",
-      "description": "Presenting or inquiry about Aadhaar/Voter ID/Passport/Card"
+      "description": "Presenting or inquiry about Aadhaar/Voter ID/Passport/Card",
+      "signers": ["signer_01"],
+      "examples": 1,
+      "regional_variants": []
     },
     {
       "id": "WHERE",
       "phrase": "Where do I need to go?",
+      "language": "ISL",
+      "region": "All-India",
+      "variation": "standard_v1",
+      "confidence_threshold": 0.5,
+      "localPhrase": {
+        "en": "Where do I need to go?",
+        "hi": "मुझे कहाँ जाना है?",
+        "mr": "मला कुठे जायचे आहे?"
+      },
       "category": "navigation",
-      "description": "Inquiry about room, counter, or department direction"
+      "description": "Inquiry about room, counter, or department direction",
+      "signers": ["signer_01"],
+      "examples": 1,
+      "regional_variants": []
     },
     {
       "id": "THANK_YOU",
       "phrase": "Thank you for your help.",
+      "language": "ISL",
+      "region": "All-India",
+      "variation": "standard_v1",
+      "confidence_threshold": 0.5,
+      "localPhrase": {
+        "en": "Thank you for your help.",
+        "hi": "आपकी मदद के लिए धन्यवाद।",
+        "mr": "तुमच्या मदतीबद्दल धन्यवाद."
+      },
       "category": "courtesy",
-      "description": "Expression of gratitude"
+      "description": "Expression of gratitude",
+      "signers": ["signer_01"],
+      "examples": 1,
+      "regional_variants": []
     },
     {
       "id": "FINISH",
       "phrase": "I am finished.",
+      "language": "ISL",
+      "region": "All-India",
+      "variation": "standard_v1",
+      "confidence_threshold": 0.5,
+      "localPhrase": {
+        "en": "I am finished.",
+        "hi": "मैं समाप्त हो गया।",
+        "mr": "मी पूर्ण केले."
+      },
       "category": "status",
-      "description": "Transaction or interaction complete"
+      "description": "Transaction or interaction complete",
+      "signers": ["signer_01"],
+      "examples": 1,
+      "regional_variants": []
     },
     {
       "id": "UNKNOWN",
       "phrase": "Gesture not recognized. Please try again.",
+      "language": "ISL",
+      "region": "All-India",
+      "variation": "fallback",
+      "confidence_threshold": 0.0,
+      "localPhrase": {
+        "en": "Gesture not recognized. Please try again.",
+        "hi": "इशारा पहचाना नहीं गया। कृपया पुनः प्रयास करें।",
+        "mr": "खूण ओळखली नाही. कृपया पुन्हा प्रयत्न करा."
+      },
       "category": "fallback",
-      "description": "Unrecognized or transitional hand posture"
+      "description": "Unrecognized or transitional hand posture",
+      "signers": [],
+      "examples": 0,
+      "regional_variants": []
     }
   ]
 }

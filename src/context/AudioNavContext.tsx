@@ -104,11 +104,15 @@ export function AudioNavProvider({ children }: { children: ReactNode }) {
 
   const startCommandListening = () => {
     if (!speechEngine.isSTTSupported()) {
-      announce('Speech recognition is not supported in this browser.', true);
+      const msg = 'Voice commands are not supported in this browser.';
+      announce(msg, true);
+      setLastTranscript(msg);
+      setTimeout(() => setLastTranscript(''), 4000);
       return;
     }
 
     setIsListening(true);
+    setLastTranscript('Listening...');
     speechEngine.startListening(
       (transcript, isFinal) => {
         setLastTranscript(transcript);
@@ -120,6 +124,14 @@ export function AudioNavProvider({ children }: { children: ReactNode }) {
       (error) => {
         console.warn('Voice command error:', error);
         setIsListening(false);
+
+        let errorMsg = 'Could not understand command.';
+        if (error === 'microphone-permission-denied' || error === 'not-allowed') {
+          errorMsg = 'Microphone permission denied. Please allow microphone access.';
+        }
+        setLastTranscript(errorMsg);
+        announce(errorMsg, true);
+        setTimeout(() => setLastTranscript(''), 5000);
       },
       { continuous: true }
     );

@@ -1,3 +1,5 @@
+import { AccessColors, AccessSpacing, AccessShadow, AccessAnimation } from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
 /**
  * /eligibility — Eligibility & Benefit Matcher Screen
  *
@@ -33,13 +35,7 @@ import {
 } from '@/services/eligibility-engine';
 import { useSession } from '@/context/SessionContext';
 import { useAudioNav } from '@/context/AudioNavContext';
-import {
-  AccessColors,
-  AccessSpacing,
-  AccessRadius,
-  AccessFontSize,
-  AccessFontWeight,
-} from '@/constants/access-theme';
+
 
 const DISABILITY_OPTIONS = [
   { id: 'any', label: 'All / Any' },
@@ -56,6 +52,7 @@ const INCOME_BRACKETS = [
 ] as const;
 
 export default function EligibilityPage() {
+  const styles = useStyles();
   const { clearSession, broadcastEligibilityMatch } = useSession();
   const { announce } = useAudioNav();
 
@@ -404,7 +401,9 @@ export default function EligibilityPage() {
   );
 }
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: AccessColors.background,
@@ -769,4 +768,5 @@ const styles = StyleSheet.create({
     fontWeight: AccessFontWeight.bold,
     color: AccessColors.cardDefault,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

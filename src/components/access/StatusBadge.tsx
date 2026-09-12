@@ -11,12 +11,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import {
-  AccessFontSize,
-  AccessFontWeight,
-  AccessRadius,
-  AccessSpacing,
-} from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -48,6 +43,7 @@ const VARIANT_COLORS: Record<
 // ── Component ─────────────────────────────────────────────────────────────
 
 export function StatusBadge({ label, variant = 'available' }: StatusBadgeProps) {
+  const styles = useStyles();
   const colors = VARIANT_COLORS[variant];
   return (
     <View style={[styles.badge, { backgroundColor: colors.bg }]}>
@@ -59,7 +55,9 @@ export function StatusBadge({ label, variant = 'available' }: StatusBadgeProps) 
 
 // ── Styles ────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -79,4 +77,5 @@ const styles = StyleSheet.create({
     fontWeight: AccessFontWeight.medium,
     letterSpacing: 0.2,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

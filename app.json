@@ -33,7 +33,13 @@
           "imageWidth": 76
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow ACCESS to use the camera for Indian Sign Language recognition."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

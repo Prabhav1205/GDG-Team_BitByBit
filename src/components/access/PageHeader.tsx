@@ -13,14 +13,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
-import {
-  AccessColors,
-  AccessSpacing,
-  AccessRadius,
-  AccessFontSize,
-  AccessFontWeight,
-  AccessShadow,
-} from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
 import { KioskIcon } from './KioskIcon';
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -43,6 +36,7 @@ export function PageHeader({
   backLabel = 'Back',
   rightAction,
 }: PageHeaderProps) {
+  const styles = useStyles();
   const { width } = useWindowDimensions();
   const isNarrow = width < 600;
   const [backHovered, setBackHovered] = useState(false);
@@ -93,7 +87,9 @@ export function PageHeader({
 
 // ── Styles ─────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -157,4 +153,5 @@ const styles = StyleSheet.create({
   spacer: {
     width: 80,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

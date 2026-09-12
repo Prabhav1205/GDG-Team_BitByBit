@@ -8,13 +8,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import {
-  AccessColors,
-  AccessSpacing,
-  AccessRadius,
-  AccessFontSize,
-  AccessFontWeight,
-} from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -32,6 +26,7 @@ interface ConversationBubbleProps {
 // ── Component ─────────────────────────────────────────────────────────────
 
 export function ConversationBubble({ message }: ConversationBubbleProps) {
+  const styles = useStyles();
   const isUser = message.sender === 'user';
 
   return (
@@ -59,7 +54,9 @@ export function ConversationBubble({ message }: ConversationBubbleProps) {
 
 // ── Styles ────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   row: {
     gap: AccessSpacing.xs,
   },
@@ -120,4 +117,5 @@ const styles = StyleSheet.create({
   timeStaff: {
     color: AccessColors.textTertiary,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

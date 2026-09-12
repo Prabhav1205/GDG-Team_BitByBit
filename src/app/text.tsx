@@ -23,6 +23,10 @@ import { speechEngine } from '@/services/speech-engine';
 import { PhraseService, type InstitutionConfig } from '@/services/phrase-service';
 import { useSession } from '@/context/SessionContext';
 import { useAudioNav } from '@/context/AudioNavContext';
+import { useSchemeSearch } from '@/hooks/use-scheme-search';
+import { SchemeResultsPanel } from '@/components/access/SchemeResultsPanel';
+import { useAccessTheme } from '@/context/AccessThemeContext';
+import { UI_STRINGS, LANGUAGES, toSafeLangCode } from '@/constants/i18n';
 import {
   AccessColors,
   AccessSpacing,
@@ -32,10 +36,15 @@ import {
 } from '@/constants/access-theme';
 
 export default function TextToSpeakScreen() {
+  const styles = useStyles();
   const { session, clearSession, broadcastTranslation } = useSession();
   const { announce } = useAudioNav();
 
-  const institutions = PhraseService.getInstitutions();
+  const lang = toSafeLangCode(session.language);
+  const speechCode = LANGUAGES[lang].speechCode;
+  const t = UI_STRINGS[lang];
+
+  const institutions = PhraseService.getInstitutions(lang);
   const [selectedInstId, setSelectedInstId] = useState<string>(
     session.institution || 'bank'
   );
@@ -43,19 +52,18 @@ export default function TextToSpeakScreen() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechRate, setSpeechRate] = useState<number>(1.0);
   const [recentPhrases, setRecentPhrases] = useState<string[]>([]);
+  const schemeSearch = useSchemeSearch();
 
   const currentInstitution: InstitutionConfig =
-    PhraseService.getInstitutionById(selectedInstId || 'bank');
+    PhraseService.getInstitutionById(selectedInstId || 'bank', lang);
 
   useEffect(() => {
-    announce(
-      'Type-to-speak module loaded. Type a message or select quick phrases below.'
-    );
-  }, [announce]);
+    announce(t.textSubtitle);
+  }, [announce, t.textSubtitle]);
 
   function handleBack() {
     speechEngine.stopSpeaking();
-    announce('Returning to main menu');
+    announce(t.backToMain);
     clearSession();
     router.replace('/');
   }
@@ -76,6 +84,7 @@ export default function TextToSpeakScreen() {
 
     speechEngine.speak(trimmed, {
       rate: speechRate,
+      lang: speechCode,
       onEnd: () => setIsSpeaking(false),
       onError: () => setIsSpeaking(false),
     });
@@ -102,11 +111,11 @@ export default function TextToSpeakScreen() {
               focused && styles.backBtnFocused,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Back to communication options"
+            accessibilityLabel={t.backToOptions}
             testID="back-to-home"
           >
             <KioskIcon name="back" size={16} color={AccessColors.navy} />
-            <Text style={styles.backBtnLabel}>Back to communication options</Text>
+            <Text style={styles.backBtnLabel}>{t.backToOptions}</Text>
           </Pressable>
         </View>
 
@@ -123,10 +132,10 @@ export default function TextToSpeakScreen() {
               <KioskIcon name="text" size={44} color={AccessColors.teal} />
             </View>
             <Text style={styles.title} role="heading" aria-level={1}>
-              Type to Speak
+              {t.textTitle}
             </Text>
             <Text style={styles.subtitle}>
-              Type your message below or choose pre-set quick phrases to synthesize voice output.
+              {t.textSubtitle}
             </Text>
           </View>
 
@@ -135,7 +144,7 @@ export default function TextToSpeakScreen() {
             <View style={styles.inputRow}>
               <TextInput
                 style={styles.textInput}
-                placeholder="Type what you want to say..."
+                placeholder={t.textPlaceholder}
                 placeholderTextColor={AccessColors.textTertiary}
                 value={inputText}
                 onChangeText={setInputText}
@@ -149,9 +158,9 @@ export default function TextToSpeakScreen() {
                   onPress={() => setInputText('')}
                   style={styles.clearInputBtn}
                   accessibilityRole="button"
-                  accessibilityLabel="Clear typed message"
+                  accessibilityLabel={t.clearText}
                 >
-                  <Text style={styles.clearInputText}>Clear</Text>
+                  <Text style={styles.clearInputText}>{t.clearText}</Text>
                 </Pressable>
               )}
             </View>
@@ -159,7 +168,7 @@ export default function TextToSpeakScreen() {
             {/* Controls Bar: Rate Selector + Speak Button */}
             <View style={styles.controlsRow}>
               <View style={styles.rateSelector}>
-                <Text style={styles.rateLabel}>Speed:</Text>
+                <Text style={styles.rateLabel}>{t.speedLabel}</Text>
                 <Pressable
                   onPress={() => setSpeechRate(1.0)}
                   style={[
@@ -167,7 +176,7 @@ export default function TextToSpeakScreen() {
                     speechRate === 1.0 && styles.rateChipActive,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Normal speech speed"
+                  accessibilityLabel={t.speedNormal}
                 >
                   <Text
                     style={[
@@ -175,7 +184,7 @@ export default function TextToSpeakScreen() {
                       speechRate === 1.0 && styles.rateChipTextActive,
                     ]}
                   >
-                    1.0x Normal
+                    {t.speedNormal}
                   </Text>
                 </Pressable>
 
@@ -186,7 +195,7 @@ export default function TextToSpeakScreen() {
                     speechRate === 0.8 && styles.rateChipActive,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Slow speech speed"
+                  accessibilityLabel={t.speedSlow}
                 >
                   <Text
                     style={[
@@ -194,7 +203,7 @@ export default function TextToSpeakScreen() {
                       speechRate === 0.8 && styles.rateChipTextActive,
                     ]}
                   >
-                    0.8x Slow
+                    {t.speedSlow}
                   </Text>
                 </Pressable>
               </View>
@@ -209,7 +218,7 @@ export default function TextToSpeakScreen() {
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={
-                  isSpeaking ? 'Speaking message now' : 'Speak typed message aloud'
+                  isSpeaking ? t.speakingNow : t.speakMessage
                 }
                 testID="speak-button"
               >
@@ -228,16 +237,39 @@ export default function TextToSpeakScreen() {
                     (!inputText.trim() || isSpeaking) && styles.speakBtnLabelDisabled,
                   ]}
                 >
-                  {isSpeaking ? 'Speaking...' : 'Speak Message'}
+                  {isSpeaking ? t.speakingNow : t.speakMessage}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => schemeSearch.search(inputText)}
+                disabled={!inputText.trim() || schemeSearch.loading}
+                style={({ pressed }) => [
+                  styles.speakBtn,
+                  { backgroundColor: AccessColors.tealDark },
+                  (!inputText.trim() || schemeSearch.loading) && styles.speakBtnDisabled,
+                  pressed && styles.speakBtnPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Find relevant government schemes"
+                testID="find-schemes-button"
+              >
+                <Text style={styles.speakBtnLabel}>
+                  {schemeSearch.loading ? 'Searching…' : '🔍 Find Schemes'}
                 </Text>
               </Pressable>
             </View>
           </View>
 
+          <SchemeResultsPanel
+            results={schemeSearch.results}
+            loading={schemeSearch.loading}
+            error={schemeSearch.error}
+          />
+
           {/* Recent History Section */}
           {recentPhrases.length > 0 && (
             <View style={styles.historyContainer}>
-              <Text style={styles.sectionHeading}>Recently Spoken Phrases:</Text>
+              <Text style={styles.sectionHeading}>{t.recentPhrases}</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -262,7 +294,7 @@ export default function TextToSpeakScreen() {
 
           {/* Institution Quick Phrase Selector Section */}
           <View style={styles.quickPhrasesSection}>
-            <Text style={styles.sectionHeading}>Select Institution Category:</Text>
+            <Text style={styles.sectionHeading}>{t.selectCategory}:</Text>
 
             {/* Institution Tabs */}
             <View style={styles.tabsRow} role="tablist">
@@ -330,129 +362,127 @@ export default function TextToSpeakScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: AccessColors.background,
   },
   screen: {
     flex: 1,
-    backgroundColor: AccessColors.background,
   },
   navBar: {
     paddingHorizontal: AccessSpacing.xl,
     paddingVertical: AccessSpacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: AccessColors.divider,
-    backgroundColor: AccessColors.background,
+    borderBottomColor: AccessColors.borderLight,
+    backgroundColor: AccessColors.cardDefault,
   },
   backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: AccessSpacing.sm,
+    gap: AccessSpacing.xs,
     alignSelf: 'flex-start',
-    paddingVertical: AccessSpacing.sm,
-    paddingHorizontal: AccessSpacing.md,
+    paddingVertical: AccessSpacing.xs,
+    paddingHorizontal: AccessSpacing.sm,
     borderRadius: AccessRadius.sm,
-    borderWidth: 1,
-    borderColor: AccessColors.border,
-    backgroundColor: AccessColors.cardDefault,
   },
   backBtnPressed: {
-    opacity: 0.75,
-    backgroundColor: AccessColors.cardHover,
+    opacity: 0.7,
   },
   backBtnFocused: {
-    outlineWidth: 3,
-    outlineColor: AccessColors.focusRing,
+    outlineWidth: 2,
+    outlineColor: AccessColors.teal,
     outlineStyle: 'solid',
-    outlineOffset: 2,
   } as any,
   backBtnLabel: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.medium,
+    fontFamily: AccessFontFamily.medium,
     color: AccessColors.navy,
   },
   scrollView: {
     flex: 1,
   },
   contentContainer: {
-    paddingHorizontal: AccessSpacing.xl,
-    paddingVertical: AccessSpacing.xxl,
-    maxWidth: 960,
-    alignSelf: 'center',
+    padding: AccessSpacing.xl,
+    maxWidth: 900,
     width: '100%',
+    alignSelf: 'center',
     gap: AccessSpacing.xl,
+    paddingBottom: AccessSpacing.xxl * 2,
   },
   headerBlock: {
     alignItems: 'center',
-    gap: AccessSpacing.sm,
+    gap: AccessSpacing.xs,
+    paddingVertical: AccessSpacing.md,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: AccessRadius.lg,
-    backgroundColor: AccessColors.cardSelected,
-    borderWidth: 1.5,
-    borderColor: AccessColors.tealBorder + '40',
+    width: 72,
+    height: 72,
+    borderRadius: AccessRadius.full,
+    backgroundColor: AccessColors.tealLight,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: AccessSpacing.xs,
   },
   title: {
-    fontSize: AccessFontSize.xxl,
-    fontWeight: AccessFontWeight.semibold,
-    color: AccessColors.textPrimary,
+    fontSize: AccessFontSize.xl,
+    fontFamily: AccessFontFamily.bold,
+    color: AccessColors.navy,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: AccessFontSize.md,
+    fontSize: AccessFontSize.base,
+    fontFamily: AccessFontFamily.regular,
     color: AccessColors.textSecondary,
     textAlign: 'center',
     maxWidth: 600,
-    lineHeight: 24,
   },
   inputCard: {
     backgroundColor: AccessColors.cardDefault,
-    borderRadius: AccessRadius.md,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: AccessColors.border,
-    padding: AccessSpacing.xl,
+    borderRadius: AccessRadius.md,
+    padding: AccessSpacing.lg,
     gap: AccessSpacing.md,
+    ...AccessShadow.sm,
   },
   inputRow: {
     position: 'relative',
   },
   textInput: {
     backgroundColor: AccessColors.background,
-    borderWidth: 1,
-    borderColor: AccessColors.borderLight,
+    borderWidth: 1.5,
+    borderColor: AccessColors.border,
     borderRadius: AccessRadius.sm,
     padding: AccessSpacing.md,
-    fontSize: AccessFontSize.lg,
-    color: AccessColors.navy,
-    minHeight: 100,
+    fontSize: AccessFontSize.base,
+    fontFamily: AccessFontFamily.regular,
+    color: AccessColors.textPrimary,
+    minHeight: 90,
     textAlignVertical: 'top',
   },
   clearInputBtn: {
     position: 'absolute',
     top: AccessSpacing.sm,
     right: AccessSpacing.sm,
-    backgroundColor: AccessColors.divider,
+    backgroundColor: AccessColors.borderLight,
     paddingHorizontal: AccessSpacing.sm,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingVertical: AccessSpacing.xs,
+    borderRadius: AccessRadius.sm,
   },
   clearInputText: {
     fontSize: AccessFontSize.xs,
+    fontFamily: AccessFontFamily.medium,
     color: AccessColors.textSecondary,
-    fontWeight: AccessFontWeight.medium,
   },
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: AccessSpacing.md,
     flexWrap: 'wrap',
+    gap: AccessSpacing.md,
   },
   rateSelector: {
     flexDirection: 'row',
@@ -460,49 +490,51 @@ const styles = StyleSheet.create({
     gap: AccessSpacing.xs,
   },
   rateLabel: {
-    fontSize: AccessFontSize.xs,
-    fontWeight: AccessFontWeight.medium,
+    fontSize: AccessFontSize.sm,
+    fontFamily: AccessFontFamily.medium,
     color: AccessColors.textSecondary,
-    marginRight: 4,
+    marginRight: AccessSpacing.xs,
   },
   rateChip: {
-    paddingHorizontal: AccessSpacing.sm,
-    paddingVertical: 4,
-    borderRadius: AccessRadius.sm,
+    paddingHorizontal: AccessSpacing.md,
+    paddingVertical: AccessSpacing.xs,
+    borderRadius: AccessRadius.full,
     borderWidth: 1,
-    borderColor: AccessColors.borderLight,
+    borderColor: AccessColors.border,
     backgroundColor: AccessColors.background,
   },
   rateChipActive: {
-    borderColor: AccessColors.teal,
-    backgroundColor: AccessColors.cardSelected,
+    backgroundColor: AccessColors.navy,
+    borderColor: AccessColors.navy,
   },
   rateChipText: {
     fontSize: AccessFontSize.xs,
+    fontFamily: AccessFontFamily.medium,
     color: AccessColors.textSecondary,
   },
   rateChipTextActive: {
-    color: AccessColors.tealDark,
-    fontWeight: AccessFontWeight.bold,
+    color: AccessColors.cardDefault,
+    fontFamily: AccessFontFamily.semibold,
   },
   speakBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: AccessSpacing.sm,
-    backgroundColor: AccessColors.navy,
+    backgroundColor: AccessColors.teal,
     paddingHorizontal: AccessSpacing.xl,
     paddingVertical: AccessSpacing.md,
     borderRadius: AccessRadius.sm,
   },
   speakBtnDisabled: {
-    backgroundColor: AccessColors.divider,
+    backgroundColor: AccessColors.borderLight,
+    opacity: 0.6,
   },
   speakBtnPressed: {
-    opacity: 0.85,
+    backgroundColor: AccessColors.tealDark,
   },
   speakBtnLabel: {
     fontSize: AccessFontSize.base,
-    fontWeight: AccessFontWeight.semibold,
+    fontFamily: AccessFontFamily.semibold,
     color: AccessColors.cardDefault,
   },
   speakBtnLabelDisabled: {
@@ -513,24 +545,29 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.semibold,
+    fontFamily: AccessFontFamily.semibold,
     color: AccessColors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   historyRow: {
-    gap: AccessSpacing.sm,
+    flexDirection: 'row',
+    gap: AccessSpacing.xs,
+    paddingVertical: AccessSpacing.xs,
   },
   historyChip: {
-    backgroundColor: AccessColors.cardSelected,
-    borderWidth: 1,
-    borderColor: AccessColors.tealBorder + '60',
+    backgroundColor: AccessColors.cardHover,
     paddingHorizontal: AccessSpacing.md,
     paddingVertical: AccessSpacing.xs,
-    borderRadius: AccessRadius.sm,
+    borderRadius: AccessRadius.full,
+    borderWidth: 1,
+    borderColor: AccessColors.borderLight,
     maxWidth: 240,
   },
   historyChipText: {
     fontSize: AccessFontSize.xs,
-    color: AccessColors.tealDark,
+    fontFamily: AccessFontFamily.regular,
+    color: AccessColors.textPrimary,
   },
   quickPhrasesSection: {
     gap: AccessSpacing.md,
@@ -538,31 +575,30 @@ const styles = StyleSheet.create({
   tabsRow: {
     flexDirection: 'row',
     gap: AccessSpacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: AccessColors.borderLight,
+    paddingBottom: AccessSpacing.xs,
     flexWrap: 'wrap',
   },
   tabItem: {
     paddingHorizontal: AccessSpacing.md,
     paddingVertical: AccessSpacing.sm,
     borderRadius: AccessRadius.sm,
-    borderWidth: 1,
-    borderColor: AccessColors.border,
-    backgroundColor: AccessColors.cardDefault,
   },
   tabItemActive: {
     backgroundColor: AccessColors.navy,
-    borderColor: AccessColors.navy,
   },
   tabItemPressed: {
     opacity: 0.8,
   },
   tabText: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.medium,
+    fontFamily: AccessFontFamily.medium,
     color: AccessColors.textPrimary,
   },
   tabTextActive: {
     color: AccessColors.cardDefault,
-    fontWeight: AccessFontWeight.semibold,
+    fontFamily: AccessFontFamily.semibold,
   },
   categoriesContainer: {
     gap: AccessSpacing.lg,
@@ -572,7 +608,7 @@ const styles = StyleSheet.create({
   },
   categoryTitle: {
     fontSize: AccessFontSize.base,
-    fontWeight: AccessFontWeight.semibold,
+    fontFamily: AccessFontFamily.semibold,
     color: AccessColors.navy,
   },
   phraseGrid: {
@@ -600,7 +636,9 @@ const styles = StyleSheet.create({
   },
   phraseText: {
     fontSize: AccessFontSize.sm,
+    fontFamily: AccessFontFamily.regular,
     color: AccessColors.textPrimary,
     flex: 1,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

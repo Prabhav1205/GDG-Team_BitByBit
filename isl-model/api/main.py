@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 # Configure logging
@@ -71,6 +72,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve MediaPipe static helpers (camera_utils.js, hands.js) for the WebView
+STATIC_DIR = PROJECT_ROOT / "static"
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# Lazy-load the scheme retriever (no heavy deps on startup)
+try:
+    import sys as _sys
+    _sys.path.insert(0, str(PROJECT_ROOT))
+    from rag.retriever import SchemeRetriever
+    _scheme_retriever = SchemeRetriever()
+    logger.info("SchemeRetriever loaded successfully.")
+except Exception as _rag_err:
+    _scheme_retriever = None
+    logger.warning(f"SchemeRetriever unavailable: {_rag_err}")
 
 
 # ---------------------------------------------------------
@@ -250,3 +267,40 @@ async def predict_gesture(payload: PredictRequest):
         )
     finally:
         predictor.confidence_threshold = original_threshold
+
+
+# ---------------------------------------------------------
+# Scheme / RAG Endpoints
+# ---------------------------------------------------------
+
+class SchemeSearchRequest(BaseModel):
+    query: str = Field(..., description="Natural-language query from the user.")
+    user_details: Optional[Dict[str, Any]] = Field(None, description="Optional user profile for eligibility hints.")
+    top_k: int = Field(5, ge=1, le=10, description="Maximum number of matches to return.")
+
+
+@app.post("/api/schemes/search", tags=["Schemes"])
+async def search_schemes(payload: SchemeSearchRequest):
+    """Offline semantic search over government schemes database.
+
+    Called by the React frontend (text.tsx, sign.tsx) to surface relevant
+    government benefit schemes based on spoken/typed user needs.
+    """
+    if _scheme_retriever is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Scheme search service is not available. Ensure isl-model/data/schemes.json exists.",
+        )
+    try:
+        matches = _scheme_retriever.search_schemes(
+            query=payload.query,
+            top_k=payload.top_k,
+            user_details=payload.user_details,
+        )
+        return {"matches": matches}
+    except Exception as exc:
+        logger.error(f"Scheme search error: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Scheme search encountered an unexpected error.",
+        )

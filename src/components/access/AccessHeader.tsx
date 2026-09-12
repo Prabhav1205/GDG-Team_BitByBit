@@ -9,6 +9,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Animated,
   Platform,
@@ -25,15 +26,22 @@ import {
   AccessFontSize,
   AccessFontWeight,
   AccessSpacing,
+  AccessShadow,
 } from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
+import { UI_STRINGS } from '@/constants/i18n';
+import { useSession } from '@/context/SessionContext';
 import { AudioNavControl } from './AudioNavControl';
 import { KioskIcon } from './KioskIcon';
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function AccessHeader() {
+  const { session } = useSession();
+  const ui = UI_STRINGS[session.language] ?? UI_STRINGS.en;
   const { width } = useWindowDimensions();
   const isNarrow = width < 600;
+  const insets = useSafeAreaInsets();
 
   const [pulseAnim] = useState(() => new Animated.Value(1));
   const [pulseOpacity] = useState(() => new Animated.Value(0.7));
@@ -73,7 +81,15 @@ export function AccessHeader() {
       style={styles.container}
     >
       <View
-        style={[styles.inner, isNarrow && styles.innerNarrow]}
+        style={[
+          styles.inner,
+          isNarrow && styles.innerNarrow,
+          { 
+            paddingTop: Math.max(AccessSpacing.md, insets.top),
+            paddingLeft: Math.max(isNarrow ? AccessSpacing.md : AccessSpacing.xl, insets.left), 
+            paddingRight: Math.max(isNarrow ? AccessSpacing.md : AccessSpacing.xl, insets.right) 
+          }
+        ]}
         role="banner"
         accessibilityLabel="ACCESS — Accessible Communication Service"
       >
@@ -95,7 +111,7 @@ export function AccessHeader() {
             {/* Only show descriptor on wide screens */}
             {!isNarrow && (
               <Text style={styles.descriptor} numberOfLines={1}>
-                Accessible Communication Service
+                {ui.headerDescriptor}
               </Text>
             )}
           </View>
@@ -103,8 +119,8 @@ export function AccessHeader() {
 
         {/* ── RIGHT: Controls ─────────────────────────────────────── */}
         <View style={styles.right}>
-          {/* Hide AudioNavControl on very narrow screens to save space */}
-          {!isNarrow && <AudioNavControl />}
+          {/* AudioNavControl renders differently on mobile (FAB) vs desktop (inline) */}
+          {!isNarrow && <AudioNavControl isNarrow={false} insets={insets} />}
 
           {/* Status dot — compact on mobile, pill on wide */}
           {isNarrow ? (
@@ -132,7 +148,7 @@ export function AccessHeader() {
                 />
                 <View style={styles.statusDot} />
               </View>
-              <Text style={styles.statusLabel}>Available</Text>
+              <Text style={styles.statusLabel}>{ui.available}</Text>
             </View>
           )}
 
@@ -273,8 +289,8 @@ const styles = StyleSheet.create({
     color: AccessColors.textOnDarkMuted,
   },
   settingsBtn: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',

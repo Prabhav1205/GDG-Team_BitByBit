@@ -133,6 +133,13 @@ export const AccessFontSize = {
   hero: 44,
 } as const;
 
+export const AccessFontFamily = {
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  semibold: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
+} as const;
+
 export const AccessFontWeight = {
   regular: '400' as const,
   medium: '500' as const,

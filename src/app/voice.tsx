@@ -2,13 +2,13 @@
  * /voice — Voice Communication Module
  *
  * Implements real-time Speech-to-Text (STT) and Text-to-Speech (TTS)
- * using the unified Web Speech Engine.
+ * using Expo Audio recording + Groq Whisper AI on native, with multilingual
+ * text-to-speech AI responses.
  *
  * Features:
- *   — Real-time voice listening & transcript rendering
- *   — Text-to-speech AI response output (ISL reverse channel / voice response)
- *   — ARIA-compliant screen reader status updates
- *   — Quick preset speech prompts
+ *   — Real-time voice recording & Whisper AI transcript rendering
+ *   — Text-to-speech AI response output in selected language (en/hi/mr)
+ *   — Multilingual quick prompts & institutional phrases
  *   — Animated mic button with pulsing ring when active
  */
 
@@ -31,6 +31,8 @@ import { KioskIcon } from '@/components/access/KioskIcon';
 import { speechEngine } from '@/services/speech-engine';
 import { useSession } from '@/context/SessionContext';
 import { useAudioNav } from '@/context/AudioNavContext';
+import { useAccessTheme } from '@/context/AccessThemeContext';
+import { UI_STRINGS, LANGUAGES, QUICK_ACTIONS, toSafeLangCode } from '@/constants/i18n';
 import {
   AccessColors,
   AccessSpacing,
@@ -47,20 +49,26 @@ import {
   setAudioModeAsync,
 } from 'expo-audio';
 import { transcribeAudio } from '@/services/whisper-service';
-
 import { PhraseService } from '@/services/phrase-service';
 
 export default function VoicePage() {
+  const styles = useStyles();
   const { session, clearSession, broadcastTranslation } = useSession();
   const { announce } = useAudioNav();
   const { width } = useWindowDimensions();
   const isNarrow = width < 600;
 
-  // Dynamically load institution phrases (Bank, Hospital, Govt)
+  const lang = toSafeLangCode(session.language);
+  const speechCode = LANGUAGES[lang].speechCode;
+  const t = UI_STRINGS[lang];
+
+  // Dynamically load institution phrases (Bank, Hospital, Govt) localized to current language
   const currentInstitution = PhraseService.getInstitutionById(
-    session.institution || 'bank'
+    session.institution || 'bank',
+    lang
   );
-  const presetQueries = currentInstitution.categories.flatMap((cat) => cat.phrases);
+  const instPhrases = currentInstitution.categories.flatMap((cat) => cat.phrases);
+  const presetQueries = instPhrases.length > 0 ? instPhrases : QUICK_ACTIONS[lang];
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [isListening, setIsListening] = useState(false);
@@ -118,17 +126,15 @@ export default function VoicePage() {
   }, [isListening, pulseOuter1, pulseOuter2, pulseOpacity1, pulseOpacity2]);
 
   useEffect(() => {
-    announce(
-      'Voice Communication Module. Press the microphone button or select preset phrases to speak with the kiosk.'
-    );
-  }, [announce]);
+    announce(t.voiceSubtitle);
+  }, [announce, t.voiceSubtitle]);
 
   function handleBack() {
     speechEngine.stopSpeaking();
     if (isListening) {
       audioRecorder.stop().catch(() => {});
     }
-    announce('Returning to communication options');
+    announce(t.backToMain);
     clearSession();
     router.replace('/');
   }
@@ -182,7 +188,7 @@ export default function VoicePage() {
         await audioRecorder.prepareToRecordAsync();
         audioRecorder.record();
         setIsListening(true);
-        announce('Microphone active. Speak now.');
+        announce(t.micActive);
       } catch (err: any) {
         const msg = err?.message || 'Failed to start microphone recording.';
         setErrorMessage(msg);
@@ -199,18 +205,31 @@ export default function VoicePage() {
     let reply = `Thank you. You said: "${userText}". How else can I assist you at the kiosk?`;
 
     const lower = userText.toLowerCase();
-    if (lower.includes('desk') || lower.includes('where')) {
-      reply = 'The main service desk is located straight ahead, counter 3.';
-    } else if (lower.includes('document') || lower.includes('need') || lower.includes('form')) {
-      reply = 'Please have your government ID and appointment confirmation ready.';
-    } else if (lower.includes('help') || lower.includes('staff') || lower.includes('assist')) {
-      reply = 'Staff notification sent. A member of staff is coming to counter 1.';
+    if (lower.includes('desk') || lower.includes('where') || lower.includes('कहाँ') || lower.includes('कुठे')) {
+      reply = lang === 'hi'
+        ? 'मुख्य सेवा काउंटर सीधे आगे काउंटर 3 पर है।'
+        : lang === 'mr'
+        ? 'मुख्य सेवा काउंटर थेट समोर काउंटर 3 वर आहे.'
+        : 'The main service desk is located straight ahead, counter 3.';
+    } else if (lower.includes('document') || lower.includes('need') || lower.includes('form') || lower.includes('दस्तावेज') || lower.includes('कागदपत्रे')) {
+      reply = lang === 'hi'
+        ? 'कृपया अपना पहचान पत्र और अपॉइंटमेंट रसीद तैयार रखें।'
+        : lang === 'mr'
+        ? 'कृपया आपले ओळखपत्र आणि अपॉइंटमेंट पावती तयार ठेवा.'
+        : 'Please have your government ID and appointment confirmation ready.';
+    } else if (lower.includes('help') || lower.includes('staff') || lower.includes('assist') || lower.includes('मदद') || lower.includes('मदत')) {
+      reply = lang === 'hi'
+        ? 'कर्मचारी सहायता अनुरोध भेज दिया गया है।'
+        : lang === 'mr'
+        ? 'कर्मचारी मदत विनंती पाठवली आहे.'
+        : 'Staff notification sent. A member of staff is coming to counter 1.';
     }
 
     setResponseMessage(reply);
     setIsSpeakingResponse(true);
     announce(reply);
     speechEngine.speak(reply, {
+      lang: speechCode,
       onEnd: () => setIsSpeakingResponse(false),
     });
   }
@@ -240,12 +259,12 @@ export default function VoicePage() {
               focused && styles.backBtnFocused,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Back to communication options"
+            accessibilityLabel={t.backToOptions}
             testID="back-to-home"
           >
             <KioskIcon name="back" size={15} color="#FFFFFF" />
             <Text style={styles.backBtnLabel} numberOfLines={1}>
-              {isNarrow ? 'Back' : 'Back to communication options'}
+              {isNarrow ? t.backToMain : t.backToOptions}
             </Text>
           </Pressable>
         </View>
@@ -265,12 +284,23 @@ export default function VoicePage() {
               <KioskIcon name="voice" size={isNarrow ? 36 : 44} color={AccessColors.teal} />
             </LinearGradient>
             <Text style={[styles.title, isNarrow && styles.titleNarrow]} accessibilityRole="header" aria-level={1}>
-              Voice Communication
+              {t.voiceTitle}
             </Text>
             <Text style={styles.subtitle}>
-              Speak naturally using your voice. The speech engine transcribes your words and responds aloud.
+              {t.voiceSubtitle}
             </Text>
           </View>
+
+          {/* Error banner */}
+          {Boolean(errorMessage) && (
+            <View style={styles.errorBanner} role="alert">
+              <KioskIcon name="info" size={14} color="#C62828" />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+              <Pressable onPress={() => setErrorMessage('')} style={styles.errorClose}>
+                <KioskIcon name="close" size={12} color="#C62828" />
+              </Pressable>
+            </View>
+          )}
 
           {/* Voice Mic Input Card */}
           <View style={[styles.micCard, AccessShadow.md as any]}>
@@ -312,9 +342,7 @@ export default function VoicePage() {
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel={
-                    isListening
-                      ? 'Microphone active. Tap to stop listening.'
-                      : 'Tap to start voice recognition.'
+                    isListening ? t.micStop : t.micTap
                   }
                   accessibilityState={{ expanded: isListening }}
                   testID="mic-button"
@@ -340,23 +368,24 @@ export default function VoicePage() {
 
             <Text style={styles.micStatusText}>
               {isListening
-                ? '🎙️ Recording active... Tap again to stop & transcribe'
+                ? t.micActive
                 : isTranscribing
                 ? '⏳ Transcribing audio with Whisper AI...'
-                : 'Tap microphone to start recording'}
+                : t.micTap}
             </Text>
 
-            {/* Error Message Box */}
-            {Boolean(errorMessage) && (
-              <View style={styles.errorBox} role="alert">
-                <Text style={styles.errorText}>⚠️ {errorMessage}</Text>
-              </View>
-            )}
+            {/* Language indicator */}
+            <View style={styles.langIndicator}>
+              <KioskIcon name="language" size={12} color={AccessColors.teal} />
+              <Text style={styles.langIndicatorText}>
+                {LANGUAGES[lang].nativeName} · {speechCode}
+              </Text>
+            </View>
 
             {/* Transcript Display */}
             {Boolean(transcript) && (
               <View style={styles.transcriptBox} role="status" aria-live="polite">
-                <Text style={styles.transcriptLabel}>You Spoke (Transcribed)</Text>
+                <Text style={styles.transcriptLabel}>{t.youSpoke}</Text>
                 <Text style={styles.transcriptText}>{`"${transcript}"`}</Text>
               </View>
             )}
@@ -370,10 +399,10 @@ export default function VoicePage() {
                 aria-live="assertive"
               >
                 <View style={styles.responseHeader}>
-                  <Text style={styles.responseLabel}>Kiosk Response</Text>
+                  <Text style={styles.responseLabel}>{t.kioskResponse}</Text>
                   {isSpeakingResponse && (
                     <View style={styles.speakingBadge}>
-                      <Text style={styles.speakingBadgeText}>● Speaking</Text>
+                      <Text style={styles.speakingBadgeText}>{t.speaking}</Text>
                     </View>
                   )}
                 </View>
@@ -385,7 +414,7 @@ export default function VoicePage() {
           {/* Quick Presets Section */}
           <View style={styles.presetsContainer}>
             <Text style={styles.presetsHeading}>
-              Or select a suggested {currentInstitution.name} phrase:
+              {t.commonPhrases} ({currentInstitution.name}):
             </Text>
             <View style={styles.presetsGrid}>
               {presetQueries.map((query, idx) => (
@@ -397,7 +426,7 @@ export default function VoicePage() {
                     pressed && styles.presetChipPressed,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Ask: ${query}`}
+                  accessibilityLabel={query}
                 >
                   <Text style={styles.presetText}>{query}</Text>
                 </Pressable>
@@ -410,7 +439,9 @@ export default function VoicePage() {
   );
 }
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: AccessColors.background,
@@ -448,7 +479,7 @@ const styles = StyleSheet.create({
     ...AccessShadow.md,
   },
   backBtnPressed: {
-    opacity: 0.82,
+    opacity: 0.85,
   },
   backBtnFocused: {
     outlineWidth: 3,
@@ -458,11 +489,11 @@ const styles = StyleSheet.create({
   } as any,
   backBtnLabel: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.semibold,
+    fontFamily: AccessFontFamily.semibold,
     color: '#FFFFFF',
   },
 
-  // ── Scroll ────────────────────────────────────────────────────────────────
+  // ── Content container ─────────────────────────────────────────────────────
   scrollView: {
     flex: 1,
   },
@@ -473,6 +504,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
     gap: AccessSpacing.xl,
+    paddingBottom: AccessSpacing.xxl * 2,
   },
   contentContainerNarrow: {
     paddingHorizontal: AccessSpacing.md,
@@ -486,70 +518,113 @@ const styles = StyleSheet.create({
     gap: AccessSpacing.sm,
   },
   iconContainer: {
-    width: 88,
-    height: 88,
-    borderRadius: AccessRadius.lg,
-    borderWidth: 1.5,
-    borderColor: AccessColors.teal + '30',
+    width: 80,
+    height: 80,
+    borderRadius: AccessRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: AccessColors.tealBorder + '40',
   },
   iconContainerNarrow: {
-    width: 72,
-    height: 72,
+    width: 64,
+    height: 64,
   },
   title: {
     fontSize: AccessFontSize.xxl,
-    fontWeight: AccessFontWeight.bold,
-    color: AccessColors.textPrimary,
+    fontFamily: AccessFontFamily.bold,
+    color: AccessColors.navy,
     textAlign: 'center',
   },
   titleNarrow: {
     fontSize: AccessFontSize.xl,
   },
   subtitle: {
-    fontSize: AccessFontSize.md,
+    fontSize: AccessFontSize.base,
+    fontFamily: AccessFontFamily.regular,
     color: AccessColors.textSecondary,
     textAlign: 'center',
-    maxWidth: 580,
+    maxWidth: 520,
     lineHeight: 26,
+  },
+
+  // ── Error banner ──────────────────────────────────────────────────────────
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: AccessSpacing.sm,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.5,
+    borderColor: '#FECACA',
+    borderRadius: AccessRadius.md,
+    padding: AccessSpacing.md,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: AccessFontSize.sm,
+    fontFamily: AccessFontFamily.regular,
+    color: '#C62828',
+    lineHeight: 20,
+  },
+  errorClose: {
+    padding: 4,
   },
 
   // ── Mic card ─────────────────────────────────────────────────────────────
   micCard: {
     backgroundColor: AccessColors.cardDefault,
-    borderRadius: AccessRadius.lg,
     borderWidth: 1.5,
     borderColor: AccessColors.border,
+    borderRadius: AccessRadius.lg,
     padding: AccessSpacing.xxl,
     alignItems: 'center',
     gap: AccessSpacing.lg,
   },
   micButtonArea: {
-    width: 120,
-    height: 120,
+    width: 140,
+    height: 140,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   pulseRing: {
     position: 'absolute',
-    width: 110,
-    height: 110,
-    borderRadius: 55,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     borderWidth: 2,
   },
   micCircle: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    ...AccessShadow.md,
   },
   micStatusText: {
     fontSize: AccessFontSize.base,
-    fontWeight: AccessFontWeight.medium,
+    fontFamily: AccessFontFamily.medium,
     color: AccessColors.textPrimary,
+    textAlign: 'center',
+  },
+
+  // ── Language indicator ────────────────────────────────────────────────────
+  langIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: AccessColors.tealFaint,
+    borderRadius: 99,
+    paddingHorizontal: AccessSpacing.sm,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: AccessColors.teal + '30',
+  },
+  langIndicatorText: {
+    fontSize: AccessFontSize.xs,
+    fontFamily: AccessFontFamily.medium,
+    color: AccessColors.tealDark,
   },
 
   // ── Transcript ────────────────────────────────────────────────────────────
@@ -564,14 +639,14 @@ const styles = StyleSheet.create({
   },
   transcriptLabel: {
     fontSize: AccessFontSize.xs,
-    fontWeight: AccessFontWeight.bold,
+    fontFamily: AccessFontFamily.bold,
     color: AccessColors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   transcriptText: {
     fontSize: AccessFontSize.md,
-    fontWeight: AccessFontWeight.medium,
+    fontFamily: AccessFontFamily.medium,
     color: AccessColors.navy,
     lineHeight: 26,
   },
@@ -585,20 +660,6 @@ const styles = StyleSheet.create({
     borderColor: AccessColors.teal + '40',
     gap: 6,
   },
-  errorBox: {
-    width: '100%',
-    backgroundColor: '#FFEBEE',
-    borderRadius: AccessRadius.md,
-    padding: AccessSpacing.md,
-    borderWidth: 1.5,
-    borderColor: '#EF5350',
-  },
-  errorText: {
-    fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.semibold,
-    color: '#C62828',
-    lineHeight: 20,
-  },
   responseHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -606,7 +667,7 @@ const styles = StyleSheet.create({
   },
   responseLabel: {
     fontSize: AccessFontSize.xs,
-    fontWeight: AccessFontWeight.bold,
+    fontFamily: AccessFontFamily.bold,
     color: AccessColors.tealDark,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -619,11 +680,12 @@ const styles = StyleSheet.create({
   },
   speakingBadgeText: {
     fontSize: AccessFontSize.xs,
-    fontWeight: AccessFontWeight.semibold,
+    fontFamily: AccessFontFamily.semibold,
     color: AccessColors.teal,
   },
   responseText: {
     fontSize: AccessFontSize.base,
+    fontFamily: AccessFontFamily.regular,
     color: AccessColors.textPrimary,
     lineHeight: 24,
   },
@@ -634,7 +696,7 @@ const styles = StyleSheet.create({
   },
   presetsHeading: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.semibold,
+    fontFamily: AccessFontFamily.semibold,
     color: AccessColors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -659,7 +721,8 @@ const styles = StyleSheet.create({
   },
   presetText: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.medium,
+    fontFamily: AccessFontFamily.medium,
     color: AccessColors.textPrimary,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

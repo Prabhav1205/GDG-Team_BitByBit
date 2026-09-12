@@ -1,3 +1,5 @@
+import { AccessColors, AccessSpacing, AccessShadow, AccessAnimation } from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
 /**
  * ModePage — shared placeholder layout for all four communication mode pages.
  *
@@ -28,13 +30,7 @@ import { AccessHeader } from './AccessHeader';
 import { KioskIcon, type IconName } from './KioskIcon';
 import { useSession, type CommunicationMode } from '@/context/SessionContext';
 import { useAudioNav } from '@/context/AudioNavContext';
-import {
-  AccessColors,
-  AccessSpacing,
-  AccessRadius,
-  AccessFontSize,
-  AccessFontWeight,
-} from '@/constants/access-theme';
+
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -53,6 +49,7 @@ export function ModePage({
   title,
   subtitle,
 }: ModePageProps) {
+  const styles = useStyles();
   const { clearSession } = useSession();
   const { announce } = useAudioNav();
 
@@ -145,7 +142,9 @@ export function ModePage({
 
 // ── Styles ────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: AccessColors.background,
@@ -275,4 +274,5 @@ const styles = StyleSheet.create({
     fontWeight: AccessFontWeight.medium,
     color: AccessColors.textSecondary,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

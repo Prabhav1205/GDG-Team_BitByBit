@@ -11,24 +11,27 @@
 
 import React, { useEffect } from 'react';
 import {
-  View,
-  Text,
+  Animated,
+  Platform,
   Pressable,
   StyleSheet,
+  Text,
   ScrollView,
-  Platform,
-  Animated,
   useWindowDimensions,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from 'expo-router';
 
 import { AccessHeader } from '@/components/access/AccessHeader';
 import { ModeSelector } from '@/components/access/ModeSelector';
 import { AssistanceBar } from '@/components/access/AssistanceBar';
+import { AudioNavControl } from '@/components/access/AudioNavControl';
 import { KioskIcon, type IconName } from '@/components/access/KioskIcon';
 import { useSession, type InstitutionType } from '@/context/SessionContext';
 import {
+  AccessAnimation,
   AccessColors,
   AccessSpacing,
   AccessFontSize,
@@ -36,48 +39,41 @@ import {
   AccessRadius,
   AccessShadow,
 } from '@/constants/access-theme';
+import { useAccessTheme } from '@/context/AccessThemeContext';
+import { UI_STRINGS, LANG_ORDER } from '@/constants/i18n';
 
 // ── Institution definitions ────────────────────────────────────────────────
 
-const INSTITUTIONS: {
-  id: InstitutionType;
-  label: string;
-  icon: IconName;
-  description: string;
-  accent: string;
-  accentLight: string;
-  accentBorder: string;
-  gradient: [string, string];
-}[] = [
+const getInstitutions = (ui: typeof UI_STRINGS.en) => [
   {
-    id: 'bank',
-    label: 'Bank',
-    icon: 'bank',
-    description: 'Account, transactions & banking services',
+    id: 'bank' as InstitutionType,
+    label: ui.instBank ?? 'Bank',
+    icon: 'bank' as IconName,
+    description: ui.instBankDesc ?? 'Account, transactions & banking services',
     accent: AccessColors.bankAccent,
     accentLight: AccessColors.bankAccentLight,
     accentBorder: AccessColors.bankAccentBorder,
-    gradient: [AccessColors.bankAccent, '#1D4ED8'],
+    gradient: [AccessColors.bankAccent, '#1D4ED8'] as [string, string],
   },
   {
-    id: 'hospital',
-    label: 'Hospital',
-    icon: 'hospital',
-    description: 'Appointments, reception & medical assistance',
+    id: 'hospital' as InstitutionType,
+    label: ui.instHospital ?? 'Hospital',
+    icon: 'hospital' as IconName,
+    description: ui.instHospitalDesc ?? 'Appointments, reception & medical assistance',
     accent: AccessColors.hospitalAccent,
     accentLight: AccessColors.hospitalAccentLight,
     accentBorder: AccessColors.hospitalAccentBorder,
-    gradient: [AccessColors.hospitalAccent, '#BE185D'],
+    gradient: [AccessColors.hospitalAccent, '#BE185D'] as [string, string],
   },
   {
-    id: 'government',
-    label: 'Government Office',
-    icon: 'government',
-    description: 'Forms, schemes & government services',
+    id: 'government' as InstitutionType,
+    label: ui.instGov ?? 'Government Office',
+    icon: 'government' as IconName,
+    description: ui.instGovDesc ?? 'Forms, schemes & government services',
     accent: AccessColors.governmentAccent,
     accentLight: AccessColors.governmentAccentLight,
     accentBorder: AccessColors.governmentAccentBorder,
-    gradient: [AccessColors.governmentAccent, '#6D28D9'],
+    gradient: [AccessColors.governmentAccent, '#6D28D9'] as [string, string],
   },
 ];
 
@@ -89,11 +85,13 @@ function InstitutionCard({
   onPress,
   isNarrow = false,
 }: {
-  inst: (typeof INSTITUTIONS)[0];
+  inst: ReturnType<typeof getInstitutions>[0];
   selected: boolean;
   onPress: () => void;
   isNarrow?: boolean;
 }) {
+  const styles = useStyles();
+  const { AccessColors, AccessShadow } = useAccessTheme();
   const [scaleAnim] = React.useState(() => new Animated.Value(1));
   const [checkAnim] = React.useState(() => new Animated.Value(selected ? 1 : 0));
   const [hovered, setHovered] = React.useState(false);
@@ -107,6 +105,9 @@ function InstitutionCard({
     }).start();
   }, [selected, checkAnim]);
 
+  const textColor = selected ? '#FFFFFF' : AccessColors.textPrimary;
+  const descColor = selected ? 'rgba(255,255,255,0.9)' : AccessColors.textSecondary;
+
   return (
     <Animated.View
       style={[
@@ -114,14 +115,14 @@ function InstitutionCard({
         isNarrow && styles.institutionCardWrapperNarrow,
         { transform: [{ scale: scaleAnim }] },
         selected && (AccessShadow.teal as any),
-        !selected && (AccessShadow.sm as any),
+        !selected && (AccessShadow.md as any),
       ]}
     >
       <Pressable
         style={({ pressed }: any) => [
           styles.institutionCard,
+          isNarrow && styles.institutionCardNarrow,
           selected && styles.institutionCardSelected,
-          selected && { borderColor: inst.accent },
           hovered && !selected && styles.institutionCardHovered,
           pressed && styles.institutionCardPressed,
         ]}
@@ -141,42 +142,56 @@ function InstitutionCard({
         accessibilityState={{ selected }}
         testID={`institution-${inst.id}`}
       >
-        {/* Colour-coded top accent stripe */}
-        <LinearGradient
-          colors={inst.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.institutionStripe}
-        />
-
-        {/* Icon */}
-        <View
-          style={[
-            styles.institutionIcon,
-            selected
-              ? { backgroundColor: inst.accentLight, borderColor: inst.accentBorder }
-              : styles.institutionIconDefault,
-            isNarrow && styles.institutionIconNarrow,
-          ]}
-        >
-          <KioskIcon
-            name={inst.icon}
-            size={28}
-            color={selected ? inst.accent : AccessColors.navy}
+        {selected ? (
+          <LinearGradient
+            colors={inst.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
           />
-        </View>
+        ) : (
+          <LinearGradient
+            colors={inst.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: isNarrow ? 0 : 1, y: isNarrow ? 1 : 0 }}
+            style={[styles.institutionStripe, isNarrow && styles.institutionStripeNarrow]}
+          />
+        )}
 
-        <Text
-          style={[
-            styles.institutionLabel,
-            selected && { color: inst.accent },
-          ]}
-        >
-          {inst.label}
-        </Text>
-        <Text style={styles.institutionDesc} numberOfLines={2}>
-          {inst.description}
-        </Text>
+        <View style={[styles.institutionContent, isNarrow && styles.institutionContentNarrow]}>
+          {/* Icon */}
+          <View
+            style={[
+              styles.institutionIcon,
+              selected
+                ? { backgroundColor: 'rgba(255,255,255,0.2)', borderColor: 'transparent' }
+                : { backgroundColor: inst.accentLight, borderColor: inst.accentBorder },
+              isNarrow && styles.institutionIconNarrow,
+            ]}
+          >
+            <KioskIcon
+              name={inst.icon}
+              size={isNarrow ? 24 : 32}
+              color={selected ? '#FFFFFF' : inst.accent}
+            />
+          </View>
+
+          <View style={styles.institutionTextContainer}>
+            <Text
+              style={[
+                styles.institutionLabel,
+                isNarrow && styles.institutionLabelNarrow,
+                { color: textColor },
+              ]}
+              numberOfLines={1}
+            >
+              {inst.label}
+            </Text>
+            <Text style={[styles.institutionDesc, isNarrow && styles.institutionDescNarrow, { color: descColor }]} numberOfLines={2}>
+              {inst.description}
+            </Text>
+          </View>
+        </View>
 
         {/* Animated check badge */}
         <Animated.View
@@ -185,12 +200,12 @@ function InstitutionCard({
             {
               transform: [{ scale: checkAnim }],
               opacity: checkAnim,
-              backgroundColor: inst.accent,
+              backgroundColor: '#FFFFFF',
             },
           ]}
           aria-hidden
         >
-          <KioskIcon name="check" size={9} color="#FFFFFF" />
+          <KioskIcon name="check" size={12} color={inst.accent} />
         </Animated.View>
       </Pressable>
     </Animated.View>
@@ -200,8 +215,13 @@ function InstitutionCard({
 // ── Screen ─────────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
-  const { session, setInstitution } = useSession();
+  const styles = useStyles();
+  const { AccessColors } = useAccessTheme();
+  const { session, setInstitution, setMode } = useSession();
+  const ui = UI_STRINGS[session.language] ?? UI_STRINGS.en;
+  const institutions = getInstitutions(ui);
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isNarrow = width < 600;
   const [badgePulse] = React.useState(() => new Animated.Value(0.95));
 
@@ -217,16 +237,34 @@ export default function HomeScreen() {
     return () => anim.stop();
   }, [badgePulse]);
 
+  // Clear communication mode when returning to the home screen
+  useFocusEffect(
+    React.useCallback(() => {
+      if (session.communicationMode) {
+        setMode(null);
+      }
+    }, [session.communicationMode, setMode])
+  );
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <View style={styles.screen}>
+      <LinearGradient 
+        colors={[AccessColors.background, AccessColors.tealFaint]} 
+        start={{ x: 0, y: 0 }} 
+        end={{ x: 1, y: 1 }} 
+        style={styles.screen}
+      >
         {/* ── 1. Header ──────────────────────────────────────────────────── */}
         <AccessHeader />
 
         {/* ── 2–4. Scrollable content ─────────────────────────────────── */}
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.scrollContent, isNarrow && styles.scrollContentNarrow]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isNarrow && styles.scrollContentNarrow,
+            { paddingLeft: Math.max(isNarrow ? AccessSpacing.md : AccessSpacing.xl, insets.left), paddingRight: Math.max(isNarrow ? AccessSpacing.md : AccessSpacing.xl, insets.right), paddingBottom: Math.max(AccessSpacing.xl, insets.bottom + 80) }
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -235,18 +273,17 @@ export default function HomeScreen() {
             {/* Animated badge */}
             <Animated.View style={[styles.heroBadge, { transform: [{ scale: badgePulse }] }]}>
               <View style={styles.heroBadgeDot} />
-              <Text style={styles.heroBadgeText}>Accessibility Assistant</Text>
+              <Text style={styles.heroBadgeText}>{ui.accessAssistant ?? 'Accessibility Assistant'}</Text>
             </Animated.View>
 
             <Text style={[styles.heroTitle, isNarrow && styles.heroTitleNarrow]} accessibilityRole="header" aria-level={1}>
               AccessAssist
             </Text>
             <Text style={[styles.heroTagline, isNarrow && styles.heroTaglineNarrow]}>
-              Your communication assistant for accessible services.
+              {ui.homeTagline ?? 'Your communication assistant for accessible services.'}
             </Text>
             <Text style={styles.heroSub}>
-              Select your institution and choose how you would like to interact.
-              You can change your selection at any time.
+              {ui.homeSub ?? 'Select your institution and choose how you would like to interact. You can change your selection at any time.'}
             </Text>
           </View>
 
@@ -257,10 +294,10 @@ export default function HomeScreen() {
           >
             <View style={styles.sectionLabelRow}>
               <View style={styles.sectionDot} />
-              <Text style={styles.sectionLabel}>Where are you today?</Text>
+              <Text style={styles.sectionLabel}>{ui.homeSectionTitle ?? 'Where are you today?'}</Text>
             </View>
             <View style={[styles.institutionRow, isNarrow && styles.institutionRowNarrow]}>
-              {INSTITUTIONS.map((inst) => (
+              {institutions.map((inst) => (
                 <InstitutionCard
                   key={inst.id}
                   inst={inst}
@@ -279,10 +316,10 @@ export default function HomeScreen() {
           >
             <View style={styles.sectionLabelRow}>
               <View style={[styles.sectionDot, { backgroundColor: AccessColors.teal }]} />
-              <Text style={styles.sectionLabel}>Choose how you would like to communicate.</Text>
+              <Text style={styles.sectionLabel}>{ui.modeSectionTitle ?? 'Choose how you would like to communicate.'}</Text>
             </View>
             <Text style={styles.sectionSub}>
-              Select the option that is most comfortable for you.
+              {ui.modeSectionSub ?? 'Select the option that is most comfortable for you.'}
             </Text>
             <View style={styles.selectorWrapper}>
               <ModeSelector />
@@ -298,22 +335,26 @@ export default function HomeScreen() {
           >
             <KioskIcon name="info" size={15} color={AccessColors.teal} />
             <Text style={styles.accessStatementText}>
-              This kiosk supports Indian Sign Language, voice, text, and simplified
-              touch interaction. All sessions are private and automatically cleared.
+              {ui.a11yStatement}
             </Text>
           </LinearGradient>
         </ScrollView>
 
-        {/* ── 5. Footer ─────────────────────────────────────────────────── */}
+        {/* ── 5. Assistance Footer ────────────────────────────────────── */}
         <AssistanceBar />
-      </View>
+
+        {/* ── 6. Mobile Voice Commands FAB ────────────────────────────── */}
+        {isNarrow && <AudioNavControl isNarrow={true} insets={insets} />}
+      </LinearGradient>
     </SafeAreaView>
   );
 }
 
 // ── Styles ─────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: AccessColors.background,
@@ -378,7 +419,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   heroTitleNarrow: {
-    fontSize: AccessFontSize.xxl,
+    fontSize: 32,
+    lineHeight: 38,
   },
   heroTagline: {
     fontSize: AccessFontSize.lg,
@@ -387,8 +429,8 @@ const styles = StyleSheet.create({
     lineHeight: 32,
   },
   heroTaglineNarrow: {
-    fontSize: AccessFontSize.md,
-    lineHeight: 28,
+    fontSize: AccessFontSize.base,
+    lineHeight: 24,
   },
   heroSub: {
     fontSize: AccessFontSize.base,
@@ -435,11 +477,13 @@ const styles = StyleSheet.create({
   },
   institutionCardWrapper: {
     flex: 1,
-    minWidth: 160,
-    borderRadius: AccessRadius.md,
+    minWidth: 200,
+    minHeight: 180,
+    borderRadius: AccessRadius.xl,
   },
   institutionCardWrapperNarrow: {
     minWidth: 0,
+    minHeight: 90,
     flex: undefined,
     width: '100%',
   },
@@ -447,70 +491,97 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AccessColors.cardDefault,
     borderWidth: 1.5,
-    borderColor: AccessColors.border,
-    borderRadius: AccessRadius.md,
-    padding: AccessSpacing.lg,
-    gap: AccessSpacing.sm,
+    borderColor: 'transparent', // We'll use shadow instead of border for premium feel
+    borderRadius: AccessRadius.xl,
     position: 'relative',
     overflow: 'hidden',
+    justifyContent: 'center',
     ...Platform.select({ web: { outlineStyle: 'none' }, default: {} }),
   },
+  institutionCardNarrow: {
+    justifyContent: 'center',
+  },
   institutionCardSelected: {
-    borderWidth: 2,
-    backgroundColor: AccessColors.cardDefault,
+    borderWidth: 0,
   },
   institutionCardHovered: {
-    borderColor: AccessColors.borderHover,
     backgroundColor: AccessColors.cardHover,
+    transform: Platform.OS === 'web' ? [{ translateY: -2 }] : [],
   },
   institutionCardPressed: {
     opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
   institutionStripe: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 4,
-    borderTopLeftRadius: AccessRadius.md,
-    borderTopRightRadius: AccessRadius.md,
+    height: 6,
+  },
+  institutionStripeNarrow: {
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: undefined,
+    width: 6,
+    height: '100%',
+  },
+  institutionContent: {
+    padding: AccessSpacing.xl,
+    gap: AccessSpacing.md,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  institutionContentNarrow: {
+    padding: AccessSpacing.md,
+    gap: AccessSpacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  institutionTextContainer: {
+    gap: 4,
+    flex: 1,
   },
   institutionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: AccessRadius.sm,
-    borderWidth: 1.5,
+    width: 64,
+    height: 64,
+    borderRadius: AccessRadius.md,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   institutionIconNarrow: {
-    width: 40,
-    height: 40,
-  },
-  institutionIconDefault: {
-    backgroundColor: AccessColors.background,
-    borderColor: AccessColors.borderLight,
+    width: 52,
+    height: 52,
+    borderRadius: AccessRadius.sm,
   },
   institutionLabel: {
-    fontSize: AccessFontSize.md,
-    fontWeight: AccessFontWeight.semibold,
-    color: AccessColors.textPrimary,
+    fontSize: AccessFontSize.lg,
+    fontWeight: AccessFontWeight.bold,
+  },
+  institutionLabelNarrow: {
+    fontSize: AccessFontSize.base,
   },
   institutionDesc: {
     fontSize: AccessFontSize.sm,
-    fontWeight: AccessFontWeight.regular,
-    color: AccessColors.textSecondary,
+    fontWeight: AccessFontWeight.medium,
     lineHeight: 20,
+  },
+  institutionDescNarrow: {
+    fontSize: AccessFontSize.xs,
+    lineHeight: 18,
   },
   institutionCheck: {
     position: 'absolute',
     top: AccessSpacing.md,
     right: AccessSpacing.md,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    ...AccessShadow.sm,
   },
 
   // ── Mode selector wrapper ───────────────────────────────────────────────
@@ -535,4 +606,5 @@ const styles = StyleSheet.create({
     color: AccessColors.tealDark,
     lineHeight: 20,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}

@@ -42,3 +42,11 @@ def test_predict_endpoint_validation(client):
     }
     response = client.post("/predict", json=bad_payload)
     assert response.status_code == 422
+
+    # Multi-hand input must validate every candidate, not silently ignore a
+    # malformed hand and score a different one.
+    response = client.post("/predict", json={"all_landmarks": bad_payload["landmarks"]})
+    assert response.status_code == 422
+
+    response = client.post("/predict", json={"all_landmarks": []})
+    assert response.status_code == 422

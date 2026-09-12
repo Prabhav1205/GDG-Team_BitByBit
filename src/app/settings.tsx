@@ -433,15 +433,15 @@ function useStyles() {
     flexDirection: 'row',
     alignItems: 'center',
     gap: AccessSpacing.sm,
-    paddingLeft: 2,
-    marginBottom: 2,
+    paddingLeft: AccessSpacing.xs,
+    marginBottom: 4,
   },
   sectionIcon: { fontSize: 16 },
   sectionTitle: {
-    fontSize: AccessFontSize.md,
-    fontFamily: AccessFontFamily.semibold,
-    color: AccessColors.textSecondary,
-    letterSpacing: 0.5,
+    fontSize: AccessFontSize.sm,
+    fontFamily: AccessFontFamily.bold,
+    color: AccessColors.tealDark,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   sectionCard: {
@@ -450,6 +450,8 @@ function useStyles() {
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: AccessColors.borderLight,
+    borderLeftWidth: 3,
+    borderLeftColor: AccessColors.teal,
   },
 
   settingRow: {
@@ -472,7 +474,17 @@ function useStyles() {
     flex: 1,
     paddingRight: AccessSpacing.md,
   },
-  settingEmoji: { fontSize: 20 },
+  settingEmoji: {
+    fontSize: 18,
+    width: 36,
+    height: 36,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    lineHeight: 36,
+    backgroundColor: AccessColors.cardHover,
+    borderRadius: AccessRadius.sm,
+    overflow: 'hidden',
+  },
   settingText: { flex: 1 },
   settingLabel: {
     fontSize: AccessFontSize.md,
@@ -489,26 +501,27 @@ function useStyles() {
 
   launchCard: {
     margin: AccessSpacing.sm,
-    padding: AccessSpacing.md,
+    padding: AccessSpacing.lg,
     backgroundColor: AccessColors.tealFaint,
     borderRadius: AccessRadius.md,
-    borderWidth: 1,
-    borderColor: AccessColors.teal + '40',
+    borderWidth: 1.5,
+    borderColor: AccessColors.teal + '60',
   },
   launchCardPressed: {
-    backgroundColor: AccessColors.teal + '30',
+    backgroundColor: AccessColors.teal + '20',
+    borderColor: AccessColors.teal + '90',
   },
-  launchCardText: { gap: 2 },
+  launchCardText: { gap: 4 },
   launchCardTitle: {
-    fontSize: AccessFontSize.sm,
+    fontSize: AccessFontSize.base,
     fontFamily: AccessFontFamily.bold,
     color: AccessColors.tealDark,
   },
   launchCardDesc: {
-    fontSize: AccessFontSize.xs,
+    fontSize: AccessFontSize.sm,
     fontFamily: AccessFontFamily.regular,
     color: AccessColors.textPrimary,
-    lineHeight: 18,
+    lineHeight: 20,
   },
 
   chipRow: {
@@ -524,20 +537,20 @@ function useStyles() {
     paddingVertical: AccessSpacing.md,
     paddingHorizontal: AccessSpacing.lg,
     backgroundColor: AccessColors.background,
-    borderRadius: AccessRadius.full,
+    borderRadius: AccessRadius.lg,
     borderWidth: 2,
     borderColor: AccessColors.border,
   },
   optionChipPressed: { opacity: 0.8 },
   optionChipSelected: {
-    backgroundColor: AccessColors.navy,
-    borderColor: AccessColors.navy,
+    backgroundColor: AccessColors.tealDark,
+    borderColor: AccessColors.teal,
   },
   chipEmoji: { fontSize: 18 },
   optionChipLabel: {
     fontSize: AccessFontSize.base,
     fontFamily: AccessFontFamily.semibold,
-    color: AccessColors.textSecondary,
+    color: AccessColors.textPrimary,
   },
   optionChipLabelSelected: { color: '#FFFFFF' },
 
@@ -552,7 +565,11 @@ function useStyles() {
   },
   langRowPressed: { backgroundColor: AccessColors.cardHover },
   langRowLast: { borderBottomWidth: 0 },
-  langRowSelected: { backgroundColor: AccessColors.tealFaint + '40' },
+  langRowSelected: {
+    backgroundColor: AccessColors.tealFaint + '60',
+    borderLeftWidth: 3,
+    borderLeftColor: AccessColors.teal,
+  },
   langFlag: { fontSize: 20 },
   langInfo: { flex: 1 },
   langLabel: {

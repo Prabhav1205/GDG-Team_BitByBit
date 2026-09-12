@@ -154,19 +154,24 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   logoMark: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 9,
     backgroundColor: AccessColors.teal,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    shadowColor: AccessColors.teal,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.45,
+    shadowRadius: 6,
+    elevation: 4,
   },
   logoLetter: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: AccessFontWeight.bold,
     color: '#FFFFFF',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   wordmarkGroup: {
     gap: 1,
@@ -177,13 +182,13 @@ const styles = StyleSheet.create({
     fontSize: AccessFontSize.sm,
     fontWeight: AccessFontWeight.bold,
     color: AccessColors.textOnDark,
-    letterSpacing: Platform.select({ web: 2.5, default: 2 }),
+    letterSpacing: Platform.select({ web: 3.0, default: 2.5 }),
   },
   descriptor: {
     fontSize: 11,
     fontWeight: AccessFontWeight.regular,
     color: AccessColors.textOnDarkMuted,
-    letterSpacing: 0.1,
+    letterSpacing: 0.2,
   },
   wordmarkDivider: {
     width: 1,
@@ -254,8 +259,8 @@ const styles = StyleSheet.create({
 
   // ── Bottom accent line ────────────────────────────────────────────────────
   accentLine: {
-    height: 2,
+    height: 2.5,
     backgroundColor: AccessColors.teal,
-    opacity: 0.6,
+    opacity: 0.85,
   },
 });

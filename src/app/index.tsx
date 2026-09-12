@@ -282,9 +282,11 @@ export default function HomeScreen() {
             <Text style={[styles.heroTagline, isNarrow && styles.heroTaglineNarrow]}>
               {ui.homeTagline ?? 'Your communication assistant for accessible services.'}
             </Text>
-            <Text style={styles.heroSub}>
-              {ui.homeSub ?? 'Select your institution and choose how you would like to interact. You can change your selection at any time.'}
-            </Text>
+            {!isNarrow && (
+              <Text style={styles.heroSub}>
+                {ui.homeSub ?? 'Select your institution and choose how you would like to interact. You can change your selection at any time.'}
+              </Text>
+            )}
           </View>
 
           {/* ── Institution cards ──────────────────────────────────────── */}
@@ -325,7 +327,7 @@ export default function HomeScreen() {
                 colors={['#0B8A7E', '#1B2D4F']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={styles.voiceHeroGradient}
+                style={[styles.voiceHeroGradient, isNarrow && styles.voiceHeroGradientNarrow]}
               >
                 <View style={styles.voiceHeroOrb}>
                   <KioskIcon name="voice" size={32} color="#FFFFFF" />
@@ -340,7 +342,7 @@ export default function HomeScreen() {
                   <Text style={styles.voiceHeroTitle}>
                     {session.language === 'hi' ? 'बोलकर सहायता प्राप्त करें' : session.language === 'mr' ? 'बोलून मदत मिळवा' : 'Start Spoken Voice Assistant'}
                   </Text>
-                  <Text style={styles.voiceHeroSubtitle}>
+                  <Text style={styles.voiceHeroSubtitle} numberOfLines={isNarrow ? 2 : undefined}>
                     {session.language === 'hi' ? 'एक टैप से शुरू करें — बाकी पूरा सत्र बिना किसी अतिरिक्त टैप के चलेगा।' : session.language === 'mr' ? 'एका टॅपने सुरू करा — संपूर्ण सत्र विना अतिरिक्त टॅप चालेल.' : 'Tap once to begin. Auto-loops listen → respond → listen for the rest of your session.'}
                   </Text>
                 </View>
@@ -419,7 +421,7 @@ function useStyles() {
     paddingHorizontal: AccessSpacing.md,
     paddingTop: AccessSpacing.md,
     paddingBottom: AccessSpacing.md,
-    gap: AccessSpacing.xl,
+    gap: AccessSpacing.lg,
   },
 
   // ── Hero ──────────────────────────────────────────────────────────────────
@@ -465,17 +467,17 @@ function useStyles() {
     fontSize: AccessFontSize.lg,
     fontWeight: AccessFontWeight.regular,
     color: AccessColors.textPrimary,
-    lineHeight: 32,
+    lineHeight: 34,
   },
   heroTaglineNarrow: {
     fontSize: AccessFontSize.base,
-    lineHeight: 24,
+    lineHeight: 26,
   },
   heroSub: {
     fontSize: AccessFontSize.base,
     fontWeight: AccessFontWeight.regular,
     color: AccessColors.textSecondary,
-    lineHeight: 24,
+    lineHeight: 26,
   },
 
   // ── Sections ──────────────────────────────────────────────────────────────
@@ -494,9 +496,11 @@ function useStyles() {
     backgroundColor: AccessColors.navy,
   },
   sectionLabel: {
-    fontSize: AccessFontSize.md,
-    fontWeight: AccessFontWeight.semibold,
-    color: AccessColors.textPrimary,
+    fontSize: AccessFontSize.sm,
+    fontWeight: AccessFontWeight.bold,
+    color: AccessColors.tealDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   sectionSub: {
     fontSize: AccessFontSize.base,
@@ -608,8 +612,8 @@ function useStyles() {
     lineHeight: 20,
   },
   institutionDescNarrow: {
-    fontSize: AccessFontSize.xs,
-    lineHeight: 18,
+    fontSize: AccessFontSize.sm,
+    lineHeight: 20,
   },
   institutionCheck: {
     position: 'absolute',
@@ -642,8 +646,12 @@ function useStyles() {
   voiceHeroGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: AccessSpacing.lg,
+    padding: AccessSpacing.xl,
     gap: AccessSpacing.md,
+  },
+  voiceHeroGradientNarrow: {
+    padding: AccessSpacing.lg,
+    gap: AccessSpacing.sm,
   },
   voiceHeroOrb: {
     width: 60,
@@ -674,18 +682,20 @@ function useStyles() {
     fontSize: AccessFontSize.xs,
     fontFamily: AccessFontFamily.bold,
     color: '#00F5D4',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   voiceHeroTitle: {
-    fontSize: AccessFontSize.lg,
+    fontSize: AccessFontSize.xl,
     fontFamily: AccessFontFamily.bold,
     color: '#FFFFFF',
+    lineHeight: 28,
   },
   voiceHeroSubtitle: {
-    fontSize: AccessFontSize.xs,
+    fontSize: AccessFontSize.sm,
     fontFamily: AccessFontFamily.regular,
     color: 'rgba(255, 255, 255, 0.85)',
-    lineHeight: 18,
+    lineHeight: 20,
   },
   voiceHeroArrow: {
     padding: AccessSpacing.xs,
@@ -695,18 +705,18 @@ function useStyles() {
   accessStatement: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: AccessSpacing.sm,
-    padding: AccessSpacing.md,
+    gap: AccessSpacing.md,
+    padding: AccessSpacing.lg,
     borderWidth: 1,
-    borderColor: AccessColors.teal + '30',
-    borderRadius: AccessRadius.md,
+    borderColor: AccessColors.teal + '35',
+    borderRadius: AccessRadius.lg,
   },
   accessStatementText: {
     flex: 1,
-    fontSize: AccessFontSize.sm,
+    fontSize: AccessFontSize.base,
     fontWeight: AccessFontWeight.regular,
     color: AccessColors.tealDark,
-    lineHeight: 20,
+    lineHeight: 22,
   },
 }), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
 }

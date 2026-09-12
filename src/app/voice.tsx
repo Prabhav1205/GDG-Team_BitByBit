@@ -516,7 +516,7 @@ export default function VoicePage() {
         <AccessHeader />
 
         {/* Top Controls Bar */}
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, isNarrow && styles.topBarNarrow]}>
           <Pressable
             onPress={handleExit}
             style={({ pressed }) => [styles.exitBtn, pressed && styles.btnPressed]}
@@ -577,7 +577,7 @@ export default function VoicePage() {
               </LinearGradient>
             </View>
 
-            <Text style={styles.fsmStateLabel}>
+            <Text style={[styles.fsmStateLabel, isNarrow && styles.fsmStateLabelNarrow]}>
               {voiceStep === 'LISTENING'
                 ? (lang === 'hi' ? 'अब बोलें (हाथ मुक्त)' : lang === 'mr' ? 'आता बोला (हात मुक्त)' : 'Listening Hands-Free')
                 : voiceStep === 'TRANSCRIBING'
@@ -642,6 +642,7 @@ export default function VoicePage() {
 
           {/* Voice Prompt Suggestions for Users / Testers (Dynamic per Institution) */}
           <View style={styles.promptHintsContainer}>
+            <View style={styles.hintsDivider} />
             <Text style={styles.promptHintsHeading}>
               {lang === 'hi'
                 ? `उपलब्ध आवाज़ कमांड (${session.institution === 'bank' ? 'बैंक' : session.institution === 'hospital' ? 'अस्पताल' : 'सरकारी कार्यालय'}):`
@@ -1043,25 +1044,26 @@ function useStyles() {
       borderBottomColor: AccessColors.border,
       backgroundColor: AccessColors.cardDefault,
     },
+    topBarNarrow: {
+      paddingHorizontal: AccessSpacing.md,
+    },
     exitBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: AccessSpacing.xs,
-      paddingVertical: AccessSpacing.xs + 2,
-      paddingHorizontal: AccessSpacing.sm + 4,
+      paddingVertical: AccessSpacing.sm,
+      paddingHorizontal: AccessSpacing.md,
       borderRadius: AccessRadius.md,
-      backgroundColor: AccessColors.cardHover,
-      borderWidth: 1,
-      borderColor: AccessColors.border,
+      backgroundColor: AccessColors.navy,
+      ...AccessShadow.sm,
     },
     btnPressed: {
-      opacity: 0.7,
-      backgroundColor: AccessColors.cardHover,
+      opacity: 0.75,
     },
     exitBtnText: {
-      color: AccessColors.textPrimary,
+      color: '#FFFFFF',
       fontSize: AccessFontSize.sm,
-      fontFamily: AccessFontFamily.medium,
+      fontFamily: AccessFontFamily.semibold,
     },
     liveIndicatorBadge: {
       flexDirection: 'row',
@@ -1148,13 +1150,16 @@ function useStyles() {
       color: AccessColors.textPrimary,
       textAlign: 'center',
     },
+    fsmStateLabelNarrow: {
+      fontSize: AccessFontSize.lg,
+    },
     fsmSubHint: {
-      fontSize: AccessFontSize.sm,
+      fontSize: AccessFontSize.base,
       fontFamily: AccessFontFamily.regular,
       color: AccessColors.textSecondary,
       textAlign: 'center',
-      maxWidth: 420,
-      lineHeight: 20,
+      maxWidth: 440,
+      lineHeight: 24,
     },
 
     // ── Cards ────────────────────────────────────────────────────────────────
@@ -1176,10 +1181,10 @@ function useStyles() {
     },
     cardTitle: {
       fontSize: AccessFontSize.sm,
-      fontFamily: AccessFontFamily.semibold,
+      fontFamily: AccessFontFamily.bold,
       color: AccessColors.textSecondary,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      letterSpacing: 0.8,
     },
     intentBadge: {
       backgroundColor: 'rgba(0, 245, 212, 0.15)',
@@ -1211,9 +1216,9 @@ function useStyles() {
       lineHeight: 22,
     },
     responseBox: {
-      backgroundColor: AccessColors.cardHover,
+      backgroundColor: AccessColors.tealFaint,
       borderWidth: 1,
-      borderColor: AccessColors.teal,
+      borderColor: AccessColors.teal + '60',
       borderRadius: AccessRadius.md,
       padding: AccessSpacing.md,
       minHeight: 64,
@@ -1222,7 +1227,7 @@ function useStyles() {
     responseText: {
       fontSize: AccessFontSize.base,
       fontFamily: AccessFontFamily.regular,
-      color: AccessColors.textPrimary,
+      color: AccessColors.tealDark,
       lineHeight: 24,
     },
 
@@ -1249,15 +1254,21 @@ function useStyles() {
 
     // ── Hints ────────────────────────────────────────────────────────────────
     promptHintsContainer: {
-      gap: AccessSpacing.xs,
+      gap: AccessSpacing.sm,
       marginTop: AccessSpacing.xs,
+      paddingTop: AccessSpacing.sm,
+    },
+    hintsDivider: {
+      height: 1,
+      backgroundColor: AccessColors.borderLight,
+      marginBottom: AccessSpacing.xs,
     },
     promptHintsHeading: {
       fontSize: AccessFontSize.xs,
-      fontFamily: AccessFontFamily.semibold,
+      fontFamily: AccessFontFamily.bold,
       color: AccessColors.textSecondary,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      letterSpacing: 0.7,
     },
     hintChipsRow: {
       flexDirection: 'row',
@@ -1273,7 +1284,7 @@ function useStyles() {
       borderColor: AccessColors.border,
       borderRadius: AccessRadius.full,
       paddingHorizontal: AccessSpacing.sm,
-      paddingVertical: AccessSpacing.xs - 2,
+      paddingVertical: 5,
     },
   }), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessRadius, AccessShadow]);
 }

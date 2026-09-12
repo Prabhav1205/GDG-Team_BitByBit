@@ -159,7 +159,7 @@ export function ModeCard({
             ]}
             aria-hidden
           >
-            <KioskIcon name={iconName} size={isNarrow ? 24 : 34} color={selected ? '#FFFFFF' : accent.accent} />
+            <KioskIcon name={iconName} size={isNarrow ? 20 : 34} color={selected ? '#FFFFFF' : accent.accent} />
           </View>
 
           {/* Text content */}
@@ -175,7 +175,7 @@ export function ModeCard({
               >
                 {title}
               </Text>
-              {Boolean(shortcutNumber) && (
+              {Boolean(shortcutNumber) && !isNarrow && (
                 <View style={[styles.shortcutBadge, selected && { backgroundColor: 'rgba(255,255,255,0.3)' }]} aria-hidden>
                   <Text style={styles.shortcutText}>{shortcutNumber}</Text>
                 </View>
@@ -234,7 +234,7 @@ function useStyles() {
     outlineStyle: Platform.select({ web: 'none' as any, default: undefined }),
   },
   cardNarrow: {
-    minHeight: 90,
+    minHeight: 104,
     justifyContent: 'center',
   },
 
@@ -299,8 +299,8 @@ function useStyles() {
     borderWidth: 1,
   },
   iconContainerNarrow: {
-    width: 52,
-    height: 52,
+    width: 44,
+    height: 44,
     borderRadius: AccessRadius.sm,
   },
 
@@ -319,12 +319,14 @@ function useStyles() {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: AccessRadius.sm,
-    backgroundColor: AccessColors.navy,
+    backgroundColor: 'rgba(27, 45, 79, 0.15)',
+    borderWidth: 1,
+    borderColor: AccessColors.navy + '60',
   },
   shortcutText: {
     fontSize: AccessFontSize.xs,
     fontWeight: AccessFontWeight.bold,
-    color: '#FFFFFF',
+    color: AccessColors.navy,
   },
   title: {
     fontSize: AccessFontSize.lg,
@@ -338,11 +340,11 @@ function useStyles() {
   description: {
     fontSize: AccessFontSize.sm,
     fontWeight: AccessFontWeight.medium,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   descriptionNarrow: {
-    fontSize: AccessFontSize.xs,
-    lineHeight: 18,
+    fontSize: AccessFontSize.sm,
+    lineHeight: 22,
   },
 
   // ── Animated check badge ──────────────────────────────────────────────────

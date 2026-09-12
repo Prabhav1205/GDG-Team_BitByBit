@@ -145,7 +145,7 @@ export function AssistanceBar() {
 
           {/* Row 2: Language + Privacy */}
           <View style={styles.narrowBottomRow}>
-            <Text style={styles.privacyNotice}>{ui.sessionPrivate}</Text>
+            <Text style={styles.privacyNotice} numberOfLines={1}>{ui.sessionPrivate}</Text>
             <Pressable
               style={styles.languageBtn}
               onPress={() => setLangModalVisible(true)}
@@ -216,7 +216,7 @@ export function AssistanceBar() {
                 end={{ x: 1, y: 0 }}
                 style={[styles.benefitsBtn, benefitsHovered && { opacity: 0.92 }]}
               >
-                <KioskIcon name="benefits" size={14} color="#FFFFFF" />
+                <KioskIcon name="benefits" size={16} color="#FFFFFF" />
                 <Text style={styles.benefitsBtnLabel}>{ui.benefitSchemes}</Text>
                 <Text style={styles.benefitsArrow}>↗</Text>
               </LinearGradient>
@@ -256,7 +256,7 @@ function useStyles() {
     backgroundColor: 'rgba(244, 243, 240, 0.75)', // AccessColors.background but transparent
   },
   divider: {
-    height: 1,
+    height: 1.5,
     backgroundColor: AccessColors.divider,
   },
 
@@ -282,16 +282,16 @@ function useStyles() {
     gap: AccessSpacing.xs,
   },
   assistanceLabel: {
-    fontSize: AccessFontSize.sm,
-    fontFamily: AccessFontFamily.medium,
-    color: AccessColors.textSecondary,
+    fontSize: AccessFontSize.base,
+    fontFamily: AccessFontFamily.semibold,
+    color: AccessColors.textPrimary,
   },
 
   // ── Narrow / mobile layout ────────────────────────────────────────────────
   narrowInner: {
     paddingHorizontal: AccessSpacing.md,
-    paddingVertical: AccessSpacing.sm,
-    gap: AccessSpacing.xs,
+    paddingVertical: AccessSpacing.md,
+    gap: AccessSpacing.sm,
   },
   narrowButtonRow: {
     flexDirection: 'row',
@@ -313,10 +313,11 @@ function useStyles() {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: AccessSpacing.sm + 1,
+    paddingVertical: AccessSpacing.sm + 2,
     paddingHorizontal: AccessSpacing.md,
     borderRadius: AccessRadius.sm,
     backgroundColor: AccessColors.navy,
+    minHeight: 44,
     ...AccessShadow.sm,
   },
   staffBtnFlex: {
@@ -363,8 +364,9 @@ function useStyles() {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: AccessSpacing.sm + 1,
+    paddingVertical: AccessSpacing.sm + 2,
     paddingHorizontal: AccessSpacing.md,
+    minHeight: 44,
   },
   benefitsBtnLabel: {
     fontSize: AccessFontSize.sm,
@@ -422,6 +424,7 @@ function useStyles() {
     fontFamily: AccessFontFamily.regular,
     color: AccessColors.textTertiary,
     textAlign: 'right',
+    flex: 1,
   },
 }), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
 }

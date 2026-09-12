@@ -13,12 +13,13 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
-  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AccessHeader } from '@/components/access/AccessHeader';
+import { PageHeader } from '@/components/access/PageHeader';
 import { KioskIcon } from '@/components/access/KioskIcon';
 import { speechEngine } from '@/services/speech-engine';
 import { PhraseService, type InstitutionConfig } from '@/services/phrase-service';
@@ -40,6 +41,8 @@ export default function TextToSpeakScreen() {
   const styles = useStyles();
   const { session, clearSession, broadcastTranslation } = useSession();
   const { announce } = useAudioNav();
+  const { width } = useWindowDimensions();
+  const isNarrow = width < 600;
 
   const lang = toSafeLangCode(session.language);
   const speechCode = LANGUAGES[lang].speechCode;
@@ -103,38 +106,24 @@ export default function TextToSpeakScreen() {
         <AccessHeader />
 
         {/* Back Navigation Bar */}
-        <View style={styles.navBar}>
-          <Pressable
-            onPress={handleBack}
-            style={({ pressed, focused }: any) => [
-              styles.backBtn,
-              pressed && styles.backBtnPressed,
-              focused && styles.backBtnFocused,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t.backToOptions}
-            testID="back-to-home"
-          >
-            <KioskIcon name="back" size={16} color={AccessColors.navy} />
-            <Text style={styles.backBtnLabel}>{t.backToOptions}</Text>
-          </Pressable>
-        </View>
+        <PageHeader
+          title={t.textTitle}
+          backRoute="/"
+          backLabel={t.backToOptions}
+        />
 
         {/* Main Content */}
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.contentContainer}
+          contentContainerStyle={[styles.contentContainer, isNarrow && styles.contentContainerNarrow]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Module Banner */}
+          {/* Module Banner — only show icon+subtitle now, title is in PageHeader */}
           <View style={styles.headerBlock}>
             <View style={styles.iconContainer}>
               <KioskIcon name="text" size={44} color={AccessColors.teal} />
             </View>
-            <Text style={styles.title} role="heading" aria-level={1}>
-              {t.textTitle}
-            </Text>
             <Text style={styles.subtitle}>
               {t.textSubtitle}
             </Text>
@@ -167,7 +156,7 @@ export default function TextToSpeakScreen() {
             </View>
 
             {/* Controls Bar: Rate Selector + Speak Button */}
-            <View style={styles.controlsRow}>
+            <View style={[styles.controlsRow, isNarrow && styles.controlsRowNarrow]}>
               <View style={styles.rateSelector}>
                 <Text style={styles.rateLabel}>{t.speedLabel}</Text>
                 <Pressable
@@ -331,7 +320,10 @@ export default function TextToSpeakScreen() {
             <View style={styles.categoriesContainer}>
               {currentInstitution.categories.map((cat, idx) => (
                 <View key={idx} style={styles.categoryBlock}>
-                  <Text style={styles.categoryTitle}>{cat.name}</Text>
+                  <View style={styles.categoryTitleRow}>
+                    <Text style={styles.categoryTitle}>{cat.name}</Text>
+                    <View style={styles.categoryTitleAccent} />
+                  </View>
                   <View style={styles.phraseGrid}>
                     {cat.phrases.map((phrase, pIdx) => (
                       <Pressable
@@ -339,6 +331,7 @@ export default function TextToSpeakScreen() {
                         onPress={() => handleSelectPhrase(phrase)}
                         style={({ pressed }) => [
                           styles.phraseCard,
+                          isNarrow && styles.phraseCardNarrow,
                           pressed && styles.phraseCardPressed,
                         ]}
                         accessibilityRole="button"
@@ -373,40 +366,6 @@ function useStyles() {
   screen: {
     flex: 1,
   },
-  navBar: {
-    paddingHorizontal: AccessSpacing.xl,
-    paddingVertical: AccessSpacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: AccessColors.borderLight,
-    backgroundColor: AccessColors.cardDefault,
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: AccessSpacing.xs,
-    alignSelf: 'flex-start',
-    paddingVertical: AccessSpacing.xs,
-    paddingHorizontal: AccessSpacing.sm,
-    borderRadius: AccessRadius.sm,
-  },
-  backBtnPressed: {
-    opacity: 0.7,
-  },
-  backBtnFocused: {
-    ...Platform.select({
-      web: {
-        outlineWidth: 2,
-        outlineColor: AccessColors.teal,
-        outlineStyle: 'solid',
-      },
-      default: {},
-    }),
-  } as any,
-  backBtnLabel: {
-    fontSize: AccessFontSize.sm,
-    fontFamily: AccessFontFamily.medium,
-    color: AccessColors.navy,
-  },
   scrollView: {
     flex: 1,
   },
@@ -418,19 +377,27 @@ function useStyles() {
     gap: AccessSpacing.xl,
     paddingBottom: AccessSpacing.xxl * 2,
   },
+  contentContainerNarrow: {
+    paddingHorizontal: AccessSpacing.md,
+  },
   headerBlock: {
     alignItems: 'center',
     gap: AccessSpacing.xs,
     paddingVertical: AccessSpacing.md,
   },
   iconContainer: {
-    width: 72,
-    height: 72,
+    width: 80,
+    height: 80,
     borderRadius: AccessRadius.full,
     backgroundColor: AccessColors.tealLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: AccessSpacing.xs,
+    marginBottom: AccessSpacing.sm,
+    shadowColor: AccessColors.teal,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   title: {
     fontSize: AccessFontSize.xl,
@@ -449,10 +416,13 @@ function useStyles() {
     backgroundColor: AccessColors.cardDefault,
     borderWidth: 1,
     borderColor: AccessColors.border,
-    borderRadius: AccessRadius.md,
+    borderRadius: AccessRadius.lg,
     padding: AccessSpacing.lg,
     gap: AccessSpacing.md,
     ...AccessShadow.sm,
+    borderLeftWidth: 4,
+    borderLeftColor: AccessColors.teal,
+    overflow: 'hidden',
   },
   inputRow: {
     position: 'relative',
@@ -489,6 +459,10 @@ function useStyles() {
     justifyContent: 'space-between',
     flexWrap: 'wrap',
     gap: AccessSpacing.md,
+  },
+  controlsRowNarrow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
   },
   rateSelector: {
     flexDirection: 'row',
@@ -528,8 +502,9 @@ function useStyles() {
     gap: AccessSpacing.sm,
     backgroundColor: AccessColors.teal,
     paddingHorizontal: AccessSpacing.xl,
-    paddingVertical: AccessSpacing.md,
-    borderRadius: AccessRadius.sm,
+    paddingVertical: AccessSpacing.md + 2,
+    borderRadius: AccessRadius.md,
+    minHeight: 48,
   },
   speakBtnDisabled: {
     backgroundColor: AccessColors.borderLight,
@@ -612,10 +587,19 @@ function useStyles() {
   categoryBlock: {
     gap: AccessSpacing.sm,
   },
+  categoryTitleRow: {
+    gap: 4,
+  },
   categoryTitle: {
     fontSize: AccessFontSize.base,
-    fontFamily: AccessFontFamily.semibold,
+    fontFamily: AccessFontFamily.bold,
     color: AccessColors.navy,
+  },
+  categoryTitleAccent: {
+    width: 32,
+    height: 2.5,
+    borderRadius: 99,
+    backgroundColor: AccessColors.teal,
   },
   phraseGrid: {
     flexDirection: 'row',
@@ -630,21 +614,25 @@ function useStyles() {
     backgroundColor: AccessColors.cardDefault,
     borderWidth: 1,
     borderColor: AccessColors.border,
-    borderRadius: AccessRadius.sm,
-    paddingHorizontal: AccessSpacing.md,
-    paddingVertical: AccessSpacing.md,
+    borderRadius: AccessRadius.md,
+    paddingHorizontal: AccessSpacing.lg,
+    paddingVertical: AccessSpacing.md + 2,
     flexGrow: 1,
     minWidth: 260,
   },
+  phraseCardNarrow: {
+    minWidth: 140,
+  },
   phraseCardPressed: {
-    backgroundColor: AccessColors.cardHover,
+    backgroundColor: AccessColors.tealFaint,
     borderColor: AccessColors.teal,
   },
   phraseText: {
-    fontSize: AccessFontSize.sm,
+    fontSize: AccessFontSize.base,
     fontFamily: AccessFontFamily.regular,
     color: AccessColors.textPrimary,
     flex: 1,
+    lineHeight: 22,
   },
 }), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
 }

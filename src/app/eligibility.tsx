@@ -281,7 +281,7 @@ export default function EligibilityPage() {
               Type your need in plain language (e.g., "scholarship for college", "wheelchair subsidy", "medical insurance")
             </Text>
 
-            <View style={styles.searchBarRow}>
+            <View style={styles.searchBarLayout}>
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search schemes (e.g. disability grant, pension, education)..."
@@ -744,32 +744,30 @@ function useStyles() {
     color: AccessColors.textSecondary,
     lineHeight: 20,
   },
-  searchBarRow: {
-    flexDirection: 'row',
-    gap: AccessSpacing.sm,
-    alignItems: 'center',
+  searchBarLayout: {
+    flexDirection: 'column',
+    gap: AccessSpacing.md,
+    alignItems: 'stretch',
   },
   searchInput: {
-    flex: 1,
-    height: 48,
+    height: 56,
     backgroundColor: AccessColors.background,
     borderWidth: 1.5,
     borderColor: AccessColors.borderLight,
-    borderRadius: AccessRadius.sm,
+    borderRadius: AccessRadius.md,
     paddingHorizontal: AccessSpacing.md,
-    fontSize: AccessFontSize.base,
+    fontSize: AccessFontSize.md,
     color: AccessColors.textPrimary,
   },
   searchSubmitBtn: {
-    height: 48,
-    paddingHorizontal: AccessSpacing.lg,
+    height: 56,
     backgroundColor: AccessColors.teal,
-    borderRadius: AccessRadius.sm,
+    borderRadius: AccessRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchSubmitBtnText: {
-    fontSize: AccessFontSize.sm,
+    fontSize: AccessFontSize.base,
     fontWeight: AccessFontWeight.bold,
     color: AccessColors.cardDefault,
   },

@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 # Configure logging
@@ -23,7 +22,6 @@ logger = logging.getLogger("isl-api")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODEL_PATH = PROJECT_ROOT / "models" / "isl_model.pkl"
-ONNX_MODEL_PATH = PROJECT_ROOT / "models" / "isl_model.onnx"
 CONFIG_PATH = PROJECT_ROOT / "config" / "gestures.json"
 METADATA_PATH = PROJECT_ROOT / "models" / "model_metadata.json"
 
@@ -31,62 +29,28 @@ METADATA_PATH = PROJECT_ROOT / "models" / "model_metadata.json"
 from src.hand_tracker import MEDIAPIPE_AVAILABLE
 from src.predictor import GesturePredictor, ModelNotLoadedError
 
-# Singleton predictor instance — either ONNX or sklearn depending on availability
-predictor: Optional[Any] = None
-_inference_backend: str = "sklearn"
-_onnx_model_loaded: bool = False
+# Singleton predictor instance
+predictor: Optional[GesturePredictor] = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle manager to load model and resources on startup."""
-    global predictor, _inference_backend, _onnx_model_loaded
-
+    global predictor
     logger.info("Initializing ISL Predictor service...")
-
-    # Attempt ONNX predictor first (preferred for edge deployment)
-    if ONNX_MODEL_PATH.exists():
-        try:
-            import sys as _sys
-            _sys.path.insert(0, str(PROJECT_ROOT))
-            from src.onnx_predictor import OnnxGesturePredictor
-
-            onnx_pred = OnnxGesturePredictor(
-                onnx_path=ONNX_MODEL_PATH,
-                gestures_config_path=CONFIG_PATH,
-                metadata_path=METADATA_PATH,
-            )
-            if onnx_pred.is_loaded:
-                predictor = onnx_pred
-                _inference_backend = "onnx"
-                _onnx_model_loaded = True
-                logger.info("ONNX gesture model loaded — edge inference active.")
-            else:
-                logger.warning("ONNX predictor init failed; falling back to sklearn.")
-        except Exception as e:
-            logger.warning("Failed to init ONNX predictor: %s — falling back to sklearn.", e)
-
-    # Fall back to sklearn GesturePredictor
-    if predictor is None:
-        try:
-            sklearn_pred = GesturePredictor(
-                model_path=MODEL_PATH,
-                gestures_config_path=CONFIG_PATH,
-                metadata_path=METADATA_PATH,
-            )
-            predictor = sklearn_pred
-            _inference_backend = "sklearn"
-            _onnx_model_loaded = False
-            if sklearn_pred.is_loaded:
-                logger.info("sklearn gesture model successfully loaded into memory.")
-            else:
-                logger.warning(
-                    "sklearn Predictor initialized but model file is missing. "
-                    "Inference will be disabled until trained."
-                )
-        except Exception as e:
-            logger.error("Failed to initialize sklearn predictor: %s", e)
-            predictor = None
+    try:
+        predictor = GesturePredictor(
+            model_path=MODEL_PATH,
+            gestures_config_path=CONFIG_PATH,
+            metadata_path=METADATA_PATH,
+        )
+        if predictor.is_loaded:
+            logger.info("Gesture model successfully loaded into memory.")
+        else:
+            logger.warning("Predictor initialized but model file is missing. Inference will be disabled until trained.")
+    except Exception as e:
+        logger.error(f"Failed to initialize predictor: {e}")
+        predictor = None
 
     yield
     logger.info("Shutting down ISL Predictor service.")
@@ -95,9 +59,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ISL Institutional Accessibility Kiosk API",
     description="Inference and configuration service for Indian Sign Language recognition module.",
-    version="2.0.0",
+    version="1.0.0",
     lifespan=lifespan,
 )
+
+from fastapi.staticfiles import StaticFiles
 
 # Enable CORS for React frontend (localhost:3000, 5173, etc.)
 app.add_middleware(
@@ -108,21 +74,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve MediaPipe static helpers (camera_utils.js, hands.js) for the WebView
 STATIC_DIR = PROJECT_ROOT / "static"
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-# Lazy-load the scheme retriever (no heavy deps on startup)
-try:
-    import sys as _sys
-    _sys.path.insert(0, str(PROJECT_ROOT))
-    from rag.retriever import SchemeRetriever
-    _scheme_retriever = SchemeRetriever()
-    logger.info("SchemeRetriever loaded successfully.")
-except Exception as _rag_err:
-    _scheme_retriever = None
-    logger.warning(f"SchemeRetriever unavailable: {_rag_err}")
 
 
 # ---------------------------------------------------------
@@ -177,6 +132,7 @@ class PredictRequest(BaseModel):
 class PredictResponse(BaseModel):
     gesture: str
     confidence: float
+    margin: Optional[float] = None
     accepted: bool
     phrase: str
     raw_probabilities: Optional[Dict[str, float]] = None
@@ -187,8 +143,6 @@ class HealthResponse(BaseModel):
     mediapipe_available: bool
     model_loaded: bool
     model_version: str
-    inference_backend: str
-    onnx_model_loaded: bool
 
 
 class ModelInfoResponse(BaseModel):
@@ -196,6 +150,7 @@ class ModelInfoResponse(BaseModel):
     model_version: str
     supported_gestures: List[str]
     phrase_mappings: Dict[str, str]
+    rejection_policy: Optional[Dict[str, Any]] = None
     metadata: Dict[str, Any]
 
 
@@ -230,25 +185,30 @@ async def get_health():
         mediapipe_available=MEDIAPIPE_AVAILABLE,
         model_loaded=is_loaded,
         model_version=version,
-        inference_backend=_inference_backend,
-        onnx_model_loaded=_onnx_model_loaded,
     )
 
 
 @app.get("/model", response_model=ModelInfoResponse, tags=["Introspection"])
 async def get_model_info():
-    """Returns active model metadata, supported gesture vocabulary, and phrase dictionary."""
+    """Returns active model metadata, supported gesture vocabulary, rejection policy, and phrase dictionary."""
     if not predictor:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Predictor engine is uninitialized",
         )
 
+    rejection_policy = {
+        "confidence_threshold": getattr(predictor, "confidence_threshold", 0.65),
+        "top_margin": getattr(predictor, "top_margin", 0.15),
+        "unknown_label": getattr(predictor, "unknown_label", "UNKNOWN"),
+    }
+
     return ModelInfoResponse(
         model_loaded=predictor.is_loaded,
         model_version=predictor.metadata.get("model_version", "1.0.0"),
         supported_gestures=predictor.get_supported_gestures(),
         phrase_mappings=predictor.phrase_map,
+        rejection_policy=rejection_policy,
         metadata=predictor.metadata,
     )
 
@@ -259,7 +219,7 @@ async def predict_gesture(payload: PredictRequest):
 
     Used by the React frontend /sign route:
     Pass landmark coordinates captured in the browser.
-    Returns the recognized gesture, confidence score, and confirmation phrase.
+    Returns the recognized gesture, confidence score, margin, and confirmation phrase.
     """
     if not predictor:
         raise HTTPException(
@@ -279,10 +239,10 @@ async def predict_gesture(payload: PredictRequest):
             detail="Payload must contain either 'landmarks' (21 points) or 'features' (63 floats).",
         )
 
-    # Apply temporary confidence threshold override if supplied
+    # Apply temporary confidence threshold override if supplied (enforcing safety floor of 0.50)
     original_threshold = predictor.confidence_threshold
     if payload.confidence_threshold is not None:
-        predictor.confidence_threshold = payload.confidence_threshold
+        predictor.confidence_threshold = max(0.50, payload.confidence_threshold)
 
     try:
         if payload.landmarks is not None:
@@ -306,68 +266,3 @@ async def predict_gesture(payload: PredictRequest):
         )
     finally:
         predictor.confidence_threshold = original_threshold
-
-
-# ---------------------------------------------------------
-# Scheme / RAG Endpoints
-# ---------------------------------------------------------
-
-class SchemeSearchRequest(BaseModel):
-    query: str = Field(..., description="Natural-language query from the user.")
-    user_details: Optional[Dict[str, Any]] = Field(None, description="Optional user profile for eligibility hints.")
-    top_k: int = Field(5, ge=1, le=10, description="Maximum number of matches to return.")
-
-
-@app.post("/api/schemes/search", tags=["Schemes"])
-async def search_schemes(payload: SchemeSearchRequest):
-    """Offline semantic search over government schemes database.
-
-    Called by the React frontend (text.tsx, sign.tsx, voice.tsx, assisted-touch.tsx)
-    to surface relevant government benefit schemes based on spoken/typed user needs.
-    Uses FAISS vector search when index is built, falls back to keyword matching.
-    """
-    if _scheme_retriever is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Scheme search service is not available. Ensure isl-model/data/schemes.json exists.",
-        )
-    try:
-        matches = _scheme_retriever.search_schemes(
-            query=payload.query,
-            top_k=payload.top_k,
-            user_details=payload.user_details,
-        )
-        return {
-            "query": payload.query,
-            "matches": matches,
-            "count": len(matches),
-            "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z",
-        }
-    except Exception as exc:
-        logger.error(f"Scheme search error: {exc}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Scheme search encountered an unexpected error.",
-        )
-
-
-@app.get("/api/schemes/categories", tags=["Schemes"])
-async def get_scheme_categories():
-    """Return all available scheme categories in the dataset.
-
-    Used by the Assisted Touch frontend to populate category buttons.
-    """
-    if _scheme_retriever is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Scheme retriever is not available.",
-        )
-    try:
-        categories = _scheme_retriever.get_categories()
-        return {"categories": categories, "count": len(categories)}
-    except Exception as exc:
-        logger.error(f"Categories fetch error: {exc}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not retrieve scheme categories.",
-        )

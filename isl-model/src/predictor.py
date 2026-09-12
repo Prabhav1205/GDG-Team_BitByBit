@@ -26,7 +26,9 @@ class GesturePredictor:
         self,
         model_path: Union[str, Path],
         gestures_config_path: Union[str, Path],
-        confidence_threshold: float = 0.75,
+        confidence_threshold: float = 0.65,
+        top_margin: float = 0.15,
+
         metadata_path: Optional[Union[str, Path]] = None,
     ) -> None:
         """Initializes the predictor with model weights and configuration.
@@ -35,12 +37,14 @@ class GesturePredictor:
             model_path: Path to serialized .pkl model file.
             gestures_config_path: Path to gestures.json configuration.
             confidence_threshold: Minimum probability required to accept a prediction.
+            top_margin: Minimum margin between top-1 and top-2 class probabilities.
             metadata_path: Optional path to model_metadata.json.
         """
         self.model_path = Path(model_path)
         self.gestures_config_path = Path(gestures_config_path)
         self.metadata_path = Path(metadata_path) if metadata_path else None
         self.confidence_threshold = confidence_threshold
+        self.top_margin = top_margin
 
         self.model = None
         self.metadata = {}
@@ -62,8 +66,15 @@ class GesturePredictor:
             cfg = json.load(f)
 
         self.unknown_label = cfg.get("unknown_label", "UNKNOWN")
-        self.phrase_map = {}
 
+        # Load rejection policy parameters from config if present
+        rejection_policy = cfg.get("rejection_policy", {})
+        if "confidence_threshold" in rejection_policy:
+            self.confidence_threshold = float(rejection_policy["confidence_threshold"])
+        if "top_margin" in rejection_policy:
+            self.top_margin = float(rejection_policy["top_margin"])
+
+        self.phrase_map = {}
         for item in cfg.get("gestures", []):
             g_id = item["id"]
             phrase = item.get("phrase", "")
@@ -83,6 +94,12 @@ class GesturePredictor:
             self.model = joblib.load(self.model_path)
         except Exception as e:
             raise RuntimeError(f"Failed to deserialize model at {self.model_path}: {e}")
+
+        # The saved forest was trained with parallel workers. Keeping inference
+        # single-threaded avoids joblib spawning a Windows multiprocessing pool
+        # for each kiosk request (which can fail under restricted hosts).
+        if hasattr(self.model, "n_jobs"):
+            self.model.n_jobs = 1
 
         # Load metadata if present
         meta_file = self.metadata_path or self.model_path.parent / "model_metadata.json"
@@ -152,12 +169,26 @@ class GesturePredictor:
         probabilities = self.model.predict_proba(features_2d)[0]
         prob_dict = {cls_name: round(float(prob), 4) for cls_name, prob in zip(classes, probabilities)}
 
-        best_idx = int(np.argmax(probabilities))
+        # Sort classes by descending probability to find top-1 and top-2
+        sorted_indices = np.argsort(probabilities)[::-1]
+        best_idx = int(sorted_indices[0])
         best_class = str(classes[best_idx])
         best_confidence = float(probabilities[best_idx])
+        second_confidence = float(probabilities[sorted_indices[1]]) if len(sorted_indices) > 1 else 0.0
+        margin = float(best_confidence - second_confidence)
 
-        # 4. Confidence Thresholding
-        if best_class == self.unknown_label or best_confidence < self.confidence_threshold:
+        # 4. Multi-Criteria Rejection Gating
+        # Reject if:
+        # - Best predicted class is explicit UNKNOWN
+        # - Confidence is below the required threshold
+        # - Margin between top-1 and top-2 predictions is smaller than top_margin
+        is_rejected = (
+            best_class == self.unknown_label
+            or best_confidence < self.confidence_threshold
+            or margin < self.top_margin
+        )
+
+        if is_rejected:
             accepted = False
             final_gesture = self.unknown_label
             final_phrase = self.default_phrase
@@ -169,6 +200,7 @@ class GesturePredictor:
         return {
             "gesture": final_gesture,
             "confidence": round(best_confidence, 4),
+            "margin": round(margin, 4),
             "accepted": accepted,
             "phrase": final_phrase,
             "raw_probabilities": prob_dict,

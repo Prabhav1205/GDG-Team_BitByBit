@@ -1,8 +1,8 @@
 """Eligibility is advisory: official scheme pages remain authoritative."""
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
-def check_basic_eligibility(scheme: Dict[str, Any], user_details: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def check_basic_eligibility(scheme: Dict[str, Any], user_details: Dict[str, Any] | None = None) -> Dict[str, Any]:
     user_details = user_details or {}
     matched, unverified = [], []
     status = "potential_match"

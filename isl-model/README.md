@@ -363,7 +363,14 @@ To add, edit, or adjust vocabulary phrases, modify `config/gestures.json`. No ch
 
 The kiosk React application communicates with this service via HTTP JSON payloads.
 
-### Base URL: `http://localhost:8000`
+### Base URL
+
+For local development, the frontend defaults to `http://localhost:8000`.
+For a hosted Expo website, create a root `.env` file from `.env.example` and set
+`EXPO_PUBLIC_ISL_API_URL` to the public **HTTPS** URL of the FastAPI service.
+`localhost` in a browser always means the visitor's own computer, so it cannot
+reach a server running only on the development machine. Rebuild/re-export the
+Expo website after changing this variable.
 
 ### 1. Health Check: `GET /health`
 Verify the service and model status prior to starting camera capture.

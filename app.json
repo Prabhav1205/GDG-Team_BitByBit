@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "MyApp",
-    "slug": "MyApp",
+    "name": "AbleLink",
+    "slug": "ablelink",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "ablelink",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
@@ -37,7 +37,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow ACCESS to use the camera for Indian Sign Language recognition."
+          "cameraPermission": "Allow AbleLink to use the camera for Indian Sign Language recognition."
         }
       ]
     ],

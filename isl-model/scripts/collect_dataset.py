@@ -62,8 +62,15 @@ def collect_for_gesture(
 ) -> None:
     print(f"\n[INFO] Starting collection for: {gesture_id}")
     print("Instructions:")
-    print("  - Hold the sign clearly in front of the camera.")
-    print("  - Slightly vary your hand position/angle for better generalization.")
+    if gesture_id.upper() == "UNKNOWN":
+        print("  - [UNKNOWN / REJECTION CLASS]:")
+        print("    * Move hand naturally/casually across the camera.")
+        print("    * Open flat palm, relaxed fingers, resting hand poses.")
+        print("    * Bring hand in and out of frame, casual waving.")
+        print("    * DO NOT perform any of the 10 target ISL gestures!")
+    else:
+        print("  - Hold the sign clearly in front of the camera.")
+        print("  - Slightly vary your hand position/angle for better generalization.")
     print("  - Press 'SPACE' to Pause/Resume capture.")
     print("  - Press 'q' or ESC to stop and return to menu.\n")
 

@@ -319,17 +319,5 @@ PYTHONPATH=. python tests/test_rejection_gating.py
   * Full screen-reader semantic trees and live region announcements for state changes.
   * Switch access scanning and customizable dwell click to ensure independence for users with severe motor impairments.
 
----
-
-## 👥 Team BitByBit
-
-Developed with ❤️ for the Google Developer Groups (GDG) Accessibility Hackathon.
-
-* **Siya Kolwalkar**
-* **Prabhav Sharma**
-* **Harsh Sharma**
-* **Mayur**
-
----
 
 *AbleLink — Accessibility is not a feature; it is a fundamental right.*

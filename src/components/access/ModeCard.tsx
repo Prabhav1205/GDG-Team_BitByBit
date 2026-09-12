@@ -26,6 +26,7 @@ import {
   Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 
 import { KioskIcon, type IconName } from './KioskIcon';
 import { AccessColors, AccessSpacing, AccessShadow, AccessAnimation } from '@/constants/access-theme';
@@ -78,9 +79,11 @@ export function ModeCard({
   isNarrow = false,
 }: ModeCardProps) {
   const styles = useStyles();
+  const { AccessColors } = useAccessTheme();
   const [hovered, setHovered] = useState(false);
   const [scaleAnim] = useState(() => new Animated.Value(1));
   const [checkAnim] = useState(() => new Animated.Value(selected ? 1 : 0));
+  const [iconAnim] = useState(() => new Animated.Value(1));
 
   const accent = getAccent(iconName);
 
@@ -102,7 +105,14 @@ export function ModeCard({
       speed: 20,
       bounciness: 6,
     }).start();
-  }, [selected, checkAnim]);
+
+    if (selected) {
+      Animated.sequence([
+        Animated.spring(iconAnim, { toValue: 1.15, useNativeDriver: true, speed: 20 }),
+        Animated.spring(iconAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 6 }),
+      ]).start();
+    }
+  }, [selected, checkAnim, iconAnim]);
 
   const textColor = selected ? '#FFFFFF' : AccessColors.textPrimary;
   const descColor = selected ? 'rgba(255,255,255,0.9)' : AccessColors.textSecondary;
@@ -110,10 +120,20 @@ export function ModeCard({
   return (
     <Animated.View style={[styles.wrapper, isNarrow && styles.wrapperNarrow, { transform: [{ scale: scaleAnim }] }]}>
       <Pressable
-        onPress={onSelect}
+        onPress={() => {
+          if (Platform.OS !== 'web') {
+            Haptics.selectionAsync().catch(() => {});
+          }
+          onSelect();
+        }}
         onHoverIn={() => { setHovered(true); animateTo(1.025); }}
         onHoverOut={() => { setHovered(false); animateTo(1); }}
-        onPressIn={() => animateTo(0.97)}
+        onPressIn={() => {
+          if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          }
+          animateTo(0.97);
+        }}
         onPressOut={() => animateTo(hovered ? 1.025 : 1)}
         style={({ focused }: any) => [
           styles.card,
@@ -149,18 +169,19 @@ export function ModeCard({
 
         <View style={[styles.contentBlock, isNarrow && styles.contentBlockNarrow]}>
           {/* Icon container */}
-          <View
+          <Animated.View
             style={[
               styles.iconContainer,
               isNarrow && styles.iconContainerNarrow,
               selected
                 ? { backgroundColor: 'rgba(255,255,255,0.2)', borderColor: 'transparent' }
                 : { backgroundColor: accent.light, borderColor: accent.border },
+              { transform: [{ scale: iconAnim }] }
             ]}
             aria-hidden
           >
-            <KioskIcon name={iconName} size={isNarrow ? 24 : 34} color={selected ? '#FFFFFF' : accent.accent} />
-          </View>
+            <KioskIcon name={iconName} size={isNarrow ? 20 : 34} color={selected ? '#FFFFFF' : accent.accent} />
+          </Animated.View>
 
           {/* Text content */}
           <View style={styles.textBlock}>
@@ -175,7 +196,7 @@ export function ModeCard({
               >
                 {title}
               </Text>
-              {Boolean(shortcutNumber) && (
+              {Boolean(shortcutNumber) && !isNarrow && (
                 <View style={[styles.shortcutBadge, selected && { backgroundColor: 'rgba(255,255,255,0.3)' }]} aria-hidden>
                   <Text style={styles.shortcutText}>{shortcutNumber}</Text>
                 </View>
@@ -209,7 +230,7 @@ export function ModeCard({
 // ── Styles ─────────────────────────────────────────────────────────────────
 
 function useStyles() {
-  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow, isDarkMode } = useAccessTheme();
   return React.useMemo(() => StyleSheet.create({
   wrapper: {
     flex: 1,
@@ -223,9 +244,9 @@ function useStyles() {
   card: {
     flex: 1,
     minHeight: 172,
-    backgroundColor: AccessColors.cardDefault,
+    backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.45)' : 'rgba(255, 255, 255, 0.65)',
     borderWidth: 1.5,
-    borderColor: 'transparent',
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.9)',
     borderRadius: AccessRadius.xl,
     position: 'relative',
     overflow: 'hidden',
@@ -234,13 +255,14 @@ function useStyles() {
     outlineStyle: Platform.select({ web: 'none' as any, default: undefined }),
   },
   cardNarrow: {
-    minHeight: 90,
+    minHeight: 104,
     justifyContent: 'center',
   },
 
   // ── States ────────────────────────────────────────────────────────────────
   cardHover: {
-    backgroundColor: AccessColors.cardHover,
+    backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.65)' : 'rgba(255, 255, 255, 0.9)',
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : '#FFFFFF',
     transform: Platform.OS === 'web' ? [{ translateY: -2 }] : [],
   },
   cardSelected: {
@@ -299,8 +321,8 @@ function useStyles() {
     borderWidth: 1,
   },
   iconContainerNarrow: {
-    width: 52,
-    height: 52,
+    width: 44,
+    height: 44,
     borderRadius: AccessRadius.sm,
   },
 
@@ -319,12 +341,14 @@ function useStyles() {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: AccessRadius.sm,
-    backgroundColor: AccessColors.navy,
+    backgroundColor: isDarkMode ? 'rgba(56, 189, 248, 0.15)' : 'rgba(27, 45, 79, 0.15)',
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(56, 189, 248, 0.3)' : AccessColors.navy + '60',
   },
   shortcutText: {
     fontSize: AccessFontSize.xs,
     fontWeight: AccessFontWeight.bold,
-    color: '#FFFFFF',
+    color: AccessColors.navy,
   },
   title: {
     fontSize: AccessFontSize.lg,
@@ -338,11 +362,11 @@ function useStyles() {
   description: {
     fontSize: AccessFontSize.sm,
     fontWeight: AccessFontWeight.medium,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   descriptionNarrow: {
-    fontSize: AccessFontSize.xs,
-    lineHeight: 18,
+    fontSize: AccessFontSize.sm,
+    lineHeight: 22,
   },
 
   // ── Animated check badge ──────────────────────────────────────────────────
@@ -357,5 +381,5 @@ function useStyles() {
     justifyContent: 'center',
     ...AccessShadow.sm,
   },
-}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow, isDarkMode]);
 }

@@ -78,8 +78,8 @@ export function PageHeader({
         <View style={styles.titleAccent} />
       </View>
 
-      <View style={styles.right}>
-        {rightAction ?? <View style={styles.spacer} />}
+      <View style={[styles.right, isNarrow && styles.rightNarrow]}>
+        {rightAction ?? <View style={[styles.spacer, isNarrow && styles.spacerNarrow]} />}
       </View>
     </View>
   );
@@ -139,10 +139,11 @@ function useStyles() {
     fontWeight: AccessFontWeight.bold,
     color: AccessColors.textPrimary,
     textAlign: 'center',
+    paddingBottom: 2,
   },
   titleAccent: {
-    width: 32,
-    height: 2.5,
+    width: 48,
+    height: 3,
     borderRadius: 99,
     backgroundColor: AccessColors.teal,
   },
@@ -150,8 +151,14 @@ function useStyles() {
     minWidth: 80,
     alignItems: 'flex-end',
   },
+  rightNarrow: {
+    minWidth: 44,
+  },
   spacer: {
     width: 80,
+  },
+  spacerNarrow: {
+    width: 44,
   },
 }), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
 }

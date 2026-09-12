@@ -105,6 +105,21 @@ function SchemeCard({ scheme }: { scheme: SchemeMatch }) {
 
   return (
     <View style={styles.card} accessibilityRole="summary">
+      {/* Fixed Listen Button */}
+      <Pressable
+        onPress={handleToggleSpeak}
+        style={[
+          styles.listenBtn,
+          isSpeaking && styles.listenBtnActive,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={isSpeaking ? `Stop reading ${scheme.name}` : `Read ${scheme.name} aloud`}
+      >
+        <Text style={[styles.listenBtnText, isSpeaking && styles.listenBtnTextActive]}>
+          {isSpeaking ? '⏹ Stop' : '🔊 Listen'}
+        </Text>
+      </Pressable>
+
       {/* Header row */}
       <View style={styles.cardHeader}>
         <View style={[styles.categoryBadge, { backgroundColor: catColors.bg, borderColor: catColors.border }]}>
@@ -113,20 +128,6 @@ function SchemeCard({ scheme }: { scheme: SchemeMatch }) {
           </Text>
         </View>
         <EligibilityBadge result={scheme.eligibility_result} />
-
-        <Pressable
-          onPress={handleToggleSpeak}
-          style={[
-            styles.listenBtn,
-            isSpeaking && styles.listenBtnActive,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={isSpeaking ? `Stop reading ${scheme.name}` : `Read ${scheme.name} aloud`}
-        >
-          <Text style={[styles.listenBtnText, isSpeaking && styles.listenBtnTextActive]}>
-            {isSpeaking ? '⏹ Stop' : '🔊 Listen'}
-          </Text>
-        </Pressable>
       </View>
 
       {/* Scheme name */}
@@ -262,7 +263,7 @@ export function SchemeResultsPanel({ results, loading, error }: SchemeResultsPan
     <View style={styles.panel}>
       {/* Panel header */}
       <View style={styles.panelHeader}>
-        <View>
+        <View style={{ flex: 1, paddingRight: AccessSpacing.md }}>
           <Text style={styles.panelTitle}>Potential Support Available</Text>
           <Text style={styles.panelSubtitle}>
             {results.length} scheme{results.length !== 1 ? 's' : ''} may be relevant to your needs
@@ -342,21 +343,23 @@ const styles = StyleSheet.create({
     gap: AccessSpacing.md,
   },
 
-  // Card
   card: {
     backgroundColor: AccessColors.cardDefault,
     borderWidth: 1,
     borderColor: AccessColors.border,
     borderRadius: AccessRadius.md,
-    padding: AccessSpacing.md,
+    padding: AccessSpacing.lg,
     gap: AccessSpacing.sm,
     ...AccessShadow.sm,
+    position: 'relative',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: AccessSpacing.sm,
     flexWrap: 'wrap',
+    paddingRight: 85,
+    marginBottom: AccessSpacing.xs,
   },
   categoryBadge: {
     paddingHorizontal: AccessSpacing.sm,
@@ -399,15 +402,19 @@ const styles = StyleSheet.create({
   },
 
   listenBtn: {
-    marginLeft: 'auto',
+    position: 'absolute',
+    top: AccessSpacing.lg,
+    right: AccessSpacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: AccessSpacing.sm + 2,
-    paddingVertical: 3,
+    paddingHorizontal: AccessSpacing.sm + 4,
+    paddingVertical: 4,
     borderRadius: AccessRadius.sm,
     backgroundColor: AccessColors.cardHover,
     borderWidth: 1,
     borderColor: AccessColors.borderLight,
+    zIndex: 2,
+    ...AccessShadow.sm,
   },
   listenBtnActive: {
     backgroundColor: AccessColors.alertErrorBg,

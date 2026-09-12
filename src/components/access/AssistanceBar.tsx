@@ -34,6 +34,7 @@ import { LANGUAGES, UI_STRINGS, toSafeLangCode } from '@/constants/i18n';
 
 export function AssistanceBar() {
   const styles = useStyles();
+  const { AccessColors } = useAccessTheme();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isNarrow = width < 600;
@@ -85,7 +86,6 @@ export function AssistanceBar() {
         visible={langModalVisible}
         onClose={() => setLangModalVisible(false)}
       />
-      <View style={styles.divider} />
 
       {isNarrow ? (
         /* ── NARROW / MOBILE layout ──────────────────────────────── */
@@ -145,7 +145,7 @@ export function AssistanceBar() {
 
           {/* Row 2: Language + Privacy */}
           <View style={styles.narrowBottomRow}>
-            <Text style={styles.privacyNotice}>{ui.sessionPrivate}</Text>
+            <Text style={styles.privacyNotice} numberOfLines={1}>{ui.sessionPrivate}</Text>
             <Pressable
               style={styles.languageBtn}
               onPress={() => setLangModalVisible(true)}
@@ -216,7 +216,7 @@ export function AssistanceBar() {
                 end={{ x: 1, y: 0 }}
                 style={[styles.benefitsBtn, benefitsHovered && { opacity: 0.92 }]}
               >
-                <KioskIcon name="benefits" size={14} color="#FFFFFF" />
+                <KioskIcon name="benefits" size={16} color="#FFFFFF" />
                 <Text style={styles.benefitsBtnLabel}>{ui.benefitSchemes}</Text>
                 <Text style={styles.benefitsArrow}>↗</Text>
               </LinearGradient>
@@ -250,14 +250,14 @@ export function AssistanceBar() {
 // ── Styles ─────────────────────────────────────────────────────────────────
 
 function useStyles() {
-  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } = useAccessTheme();
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow, isDarkMode } = useAccessTheme();
   return React.useMemo(() => StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(244, 243, 240, 0.75)', // AccessColors.background but transparent
-  },
-  divider: {
-    height: 1,
-    backgroundColor: AccessColors.divider,
+    backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.45)' : 'rgba(255, 255, 255, 0.75)',
+    borderTopWidth: 1.5,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.9)',
+    ...AccessShadow.lg,
+    overflow: 'hidden',
   },
 
   // ── Wide layout ───────────────────────────────────────────────────────────
@@ -282,16 +282,16 @@ function useStyles() {
     gap: AccessSpacing.xs,
   },
   assistanceLabel: {
-    fontSize: AccessFontSize.sm,
-    fontFamily: AccessFontFamily.medium,
-    color: AccessColors.textSecondary,
+    fontSize: AccessFontSize.base,
+    fontFamily: AccessFontFamily.semibold,
+    color: AccessColors.textPrimary,
   },
 
   // ── Narrow / mobile layout ────────────────────────────────────────────────
   narrowInner: {
     paddingHorizontal: AccessSpacing.md,
-    paddingVertical: AccessSpacing.sm,
-    gap: AccessSpacing.xs,
+    paddingVertical: AccessSpacing.md,
+    gap: AccessSpacing.sm,
   },
   narrowButtonRow: {
     flexDirection: 'row',
@@ -313,10 +313,11 @@ function useStyles() {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: AccessSpacing.sm + 1,
+    paddingVertical: AccessSpacing.sm + 2,
     paddingHorizontal: AccessSpacing.md,
     borderRadius: AccessRadius.sm,
     backgroundColor: AccessColors.navy,
+    minHeight: 44,
     ...AccessShadow.sm,
   },
   staffBtnFlex: {
@@ -363,8 +364,9 @@ function useStyles() {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: AccessSpacing.sm + 1,
+    paddingVertical: AccessSpacing.sm + 2,
     paddingHorizontal: AccessSpacing.md,
+    minHeight: 44,
   },
   benefitsBtnLabel: {
     fontSize: AccessFontSize.sm,
@@ -422,6 +424,7 @@ function useStyles() {
     fontFamily: AccessFontFamily.regular,
     color: AccessColors.textTertiary,
     textAlign: 'right',
+    flex: 1,
   },
-}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow, isDarkMode]);
 }

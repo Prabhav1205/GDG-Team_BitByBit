@@ -7,8 +7,9 @@
  */
 
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Animated,
@@ -38,20 +39,23 @@ import { KioskIcon } from './KioskIcon';
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function AccessHeader() {
-  const { session } = useSession();
+  const { session, updateAccessibility } = useSession();
   const ui = UI_STRINGS[session.language] ?? UI_STRINGS.en;
   const { width } = useWindowDimensions();
   const isNarrow = width < 600;
   const insets = useSafeAreaInsets();
+  const { isDarkMode, AccessColors } = useAccessTheme();
+  const styles = useStyles();
 
   const [settingsHovered, setSettingsHovered] = useState(false);
+  const [themeHovered, setThemeHovered] = useState(false);
 
   return (
-    <LinearGradient
-      colors={[AccessColors.headerGradientStart, AccessColors.headerGradientEnd]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
+    <BlurView
+      intensity={85}
+      tint={isDarkMode ? "dark" : "light"}
       style={styles.container}
+      blurMethod="dimezisBlurView"
     >
       <View
         style={[
@@ -64,7 +68,7 @@ export function AccessHeader() {
           }
         ]}
         role="banner"
-        accessibilityLabel="ACCESS — Accessible Communication Service"
+        accessibilityLabel="ABLELINK — Accessible Communication Service"
       >
         {/* ── LEFT: Logo + Wordmark ──────────────────────────────── */}
         <View style={styles.left}>
@@ -79,7 +83,7 @@ export function AccessHeader() {
               aria-level={1}
               numberOfLines={1}
             >
-              ACCESS
+              ABLELINK
             </Text>
             {/* Only show descriptor on wide screens */}
             {!isNarrow && (
@@ -98,6 +102,26 @@ export function AccessHeader() {
           {/* Connectivity Status (Online/Offline indicator) */}
           <ConnectivityStatus isNarrow={isNarrow} />
 
+          {/* Theme toggle */}
+          <Pressable
+            onPress={() => updateAccessibility('darkMode', !session.accessibility.darkMode)}
+            onHoverIn={() => setThemeHovered(true)}
+            onHoverOut={() => setThemeHovered(false)}
+            style={({ pressed }: any) => [
+              styles.settingsBtn,
+              themeHovered && styles.settingsBtnHovered,
+              pressed && styles.settingsBtnPressed,
+            ]}
+            accessibilityLabel="Toggle Dark Mode"
+            accessibilityRole="button"
+          >
+            <KioskIcon
+              name="contrast"
+              size={isNarrow ? 20 : 18}
+              color={themeHovered ? AccessColors.navy : AccessColors.textSecondary}
+            />
+          </Pressable>
+
           {/* Settings button */}
           <Pressable
             onPress={() => router.push('/settings' as any)}
@@ -115,7 +139,7 @@ export function AccessHeader() {
             <KioskIcon
               name="settings"
               size={isNarrow ? 20 : 18}
-              color={settingsHovered ? AccessColors.textOnDark : AccessColors.textOnDarkMuted}
+              color={settingsHovered ? AccessColors.navy : AccessColors.textSecondary}
             />
           </Pressable>
         </View>
@@ -123,13 +147,15 @@ export function AccessHeader() {
 
       {/* ── Bottom accent line ─────────────────────────────────────── */}
       <View style={styles.accentLine} />
-    </LinearGradient>
+    </BlurView>
   );
 }
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const { AccessColors, AccessSpacing, AccessFontSize, AccessFontWeight, isDarkMode } = useAccessTheme();
+  return React.useMemo(() => StyleSheet.create({
   container: {
     position: 'relative',
   },
@@ -154,19 +180,24 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   logoMark: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 9,
     backgroundColor: AccessColors.teal,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    shadowColor: AccessColors.teal,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.45,
+    shadowRadius: 6,
+    elevation: 4,
   },
   logoLetter: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: AccessFontWeight.bold,
     color: '#FFFFFF',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   wordmarkGroup: {
     gap: 1,
@@ -176,19 +207,19 @@ const styles = StyleSheet.create({
   wordmark: {
     fontSize: AccessFontSize.sm,
     fontWeight: AccessFontWeight.bold,
-    color: AccessColors.textOnDark,
-    letterSpacing: Platform.select({ web: 2.5, default: 2 }),
+    color: isDarkMode ? '#FFFFFF' : AccessColors.navy,
+    letterSpacing: Platform.select({ web: 3.0, default: 2.5 }),
   },
   descriptor: {
     fontSize: 11,
     fontWeight: AccessFontWeight.regular,
-    color: AccessColors.textOnDarkMuted,
-    letterSpacing: 0.1,
+    color: AccessColors.textSecondary,
+    letterSpacing: 0.2,
   },
   wordmarkDivider: {
     width: 1,
     height: 22,
-    backgroundColor: AccessColors.headerBorder,
+    backgroundColor: AccessColors.borderLight,
     flexShrink: 0,
   },
 
@@ -203,9 +234,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: AccessSpacing.xs,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(0,0,0,0.08)',
     borderRadius: 99,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -232,7 +263,7 @@ const styles = StyleSheet.create({
   statusLabel: {
     fontSize: 12,
     fontWeight: AccessFontWeight.medium,
-    color: AccessColors.textOnDarkMuted,
+    color: AccessColors.textSecondary,
   },
   settingsBtn: {
     width: 44,
@@ -254,8 +285,9 @@ const styles = StyleSheet.create({
 
   // ── Bottom accent line ────────────────────────────────────────────────────
   accentLine: {
-    height: 2,
+    height: 2.5,
     backgroundColor: AccessColors.teal,
-    opacity: 0.6,
+    opacity: 0.85,
   },
-});
+}), [AccessColors, AccessSpacing, AccessFontSize, AccessFontWeight, isDarkMode]);
+}

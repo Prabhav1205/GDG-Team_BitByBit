@@ -513,16 +513,20 @@ export default function AssistedTouchPage() {
             accessibilityLabel="Explore Government Schemes and Eligibility Matcher"
             testID="assisted-touch-open-schemes"
           >
-            <View style={styles.schemeGatewayIconWrap}>
-              <Text style={styles.schemeGatewayEmoji}>🏛️</Text>
-            </View>
-            <View style={styles.schemeGatewayTextCol}>
+            <View style={styles.schemeGatewayHeader}>
+              <View style={styles.schemeGatewayIconWrap}>
+                <Text style={styles.schemeGatewayEmoji}>🏛️</Text>
+              </View>
               <Text style={styles.schemeGatewayTitle}>Government Schemes & Eligibility</Text>
-              <Text style={styles.schemeGatewayDesc}>
-                Explore disability grants, assistive devices (ADIP), healthcare, pensions & scholarships in one place.
-              </Text>
             </View>
-            <Text style={styles.schemeGatewayArrow}>Explore →</Text>
+            
+            <Text style={styles.schemeGatewayDesc}>
+              Explore disability grants, assistive devices (ADIP), healthcare, pensions & scholarships in one place.
+            </Text>
+            
+            <View style={styles.schemeGatewayFooter}>
+              <Text style={styles.schemeGatewayArrow}>Explore →</Text>
+            </View>
           </Pressable>
 
           {/* ── Explanation ────────────────────────────────────────────── */}
@@ -785,8 +789,7 @@ function useStyles() {
   // Scheme gateway card
   schemeGatewayCard: {
     alignSelf: 'stretch',
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
     gap: AccessSpacing.md,
     backgroundColor: AccessColors.cardDefault,
     borderWidth: 1.5,
@@ -799,6 +802,11 @@ function useStyles() {
     opacity: 0.85,
     transform: [{ scale: 0.99 }],
   },
+  schemeGatewayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: AccessSpacing.md,
+  },
   schemeGatewayIconWrap: {
     width: 48,
     height: 48,
@@ -810,20 +818,20 @@ function useStyles() {
   schemeGatewayEmoji: {
     fontSize: 24,
   },
-  schemeGatewayTextCol: {
-    flex: 1,
-    gap: 4,
-  },
   schemeGatewayTitle: {
+    flex: 1,
     fontSize: AccessFontSize.md,
     fontFamily: AccessFontFamily.semibold,
     color: AccessColors.navy,
   },
   schemeGatewayDesc: {
-    fontSize: AccessFontSize.xs,
+    fontSize: AccessFontSize.sm,
     fontFamily: AccessFontFamily.regular,
     color: AccessColors.textSecondary,
-    lineHeight: 18,
+    lineHeight: 22,
+  },
+  schemeGatewayFooter: {
+    alignItems: 'flex-end',
   },
   schemeGatewayArrow: {
     fontSize: AccessFontSize.sm,

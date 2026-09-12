@@ -21,7 +21,10 @@ export class PhraseService {
 
   /** Get specific institution configuration by ID */
   public static getInstitutionById(id: string): InstitutionConfig {
-    const found = institutionData.institutions.find((inst) => inst.id === id);
+    const targetId = id === 'government' ? 'govt' : id;
+    const found = institutionData.institutions.find(
+      (inst) => inst.id === targetId || inst.id === id
+    );
     return found || institutionData.institutions[0];
   }
 

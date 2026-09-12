@@ -6,7 +6,7 @@
  *   2. Voice communication module (/voice) and ISL reverse channel text-to-speech output.
  */
 
-import { Platform } from 'react-native';
+import * as Speech from 'expo-speech';
 
 export interface SpeakOptions {
   rate?: number;
@@ -29,43 +29,32 @@ class SpeechEngineService {
 
   /** Check if Text-to-Speech is supported in current environment */
   public isTTSSupported(): boolean {
-    if (Platform.OS !== 'web') return false;
-    return typeof window !== 'undefined' && 'speechSynthesis' in window;
+    return true; // expo-speech is supported across iOS, Android, and Web
   }
 
   /** Check if Speech-to-Text is supported in current environment */
   public isSTTSupported(): boolean {
-    if (Platform.OS !== 'web') return false;
     return (
       typeof window !== 'undefined' &&
       ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
     );
   }
 
-  /** Speak text using SpeechSynthesis */
+  /** Speak text using expo-speech */
   public speak(text: string, options: SpeakOptions = {}): void {
-    if (!this.isTTSSupported()) {
-      console.log('[SpeechEngine TTS Fallback]:', text);
-      options.onEnd?.();
-      return;
-    }
-
     try {
-      window.speechSynthesis.cancel(); // Stop any ongoing speech
+      Speech.stop(); // Stop any ongoing speech
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = options.rate ?? 1.0;
-      utterance.pitch = options.pitch ?? 1.0;
-      utterance.lang = options.lang ?? 'en-US';
-
-      if (options.onEnd) {
-        utterance.onend = () => options.onEnd?.();
-      }
-      if (options.onError) {
-        utterance.onerror = (e) => options.onError?.(e);
-      }
-
-      window.speechSynthesis.speak(utterance);
+      Speech.speak(text, {
+        rate: options.rate ?? 1.0,
+        pitch: options.pitch ?? 1.0,
+        language: options.lang ?? 'en-US',
+        onDone: options.onEnd,
+        onError: (err) => {
+          console.warn('[SpeechEngine Expo-Speech Error]:', err);
+          options.onError?.(err);
+        },
+      });
     } catch (err) {
       console.warn('[SpeechEngine TTS Error]:', err);
       options.onEnd?.();
@@ -74,12 +63,10 @@ class SpeechEngineService {
 
   /** Stop speaking immediately */
   public stopSpeaking(): void {
-    if (this.isTTSSupported()) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {
-        // ignore
-      }
+    try {
+      Speech.stop();
+    } catch {
+      // ignore
     }
   }
 

@@ -229,6 +229,23 @@ export default function AssistedTouchPage() {
             </Pressable>
           )}
 
+          {/* Single Switch Trigger Banner for Mobile & Switch Users */}
+          {settings.switchScanning && (
+            <Pressable
+              style={({ pressed }: any) => [
+                styles.switchTriggerBtn,
+                pressed && styles.switchTriggerBtnPressed,
+              ]}
+              onPress={() => handleSelectAction(ACTIONS[scanIndex].label)}
+              accessibilityRole="button"
+              accessibilityLabel={`Single switch trigger: Select ${ACTIONS[scanIndex].label}`}
+            >
+              <Text style={styles.switchTriggerText}>
+                🔘 TAP HERE TO SELECT: {ACTIONS[scanIndex].emoji} {ACTIONS[scanIndex].label.toUpperCase()}
+              </Text>
+            </Pressable>
+          )}
+
           {/* ── Last action feedback ─────────────────────────────────────── */}
           {lastPressed && (
             <View style={styles.feedbackBar} accessibilityLiveRegion="polite">
@@ -236,7 +253,7 @@ export default function AssistedTouchPage() {
             </View>
           )}
 
-          {/* ── Large action buttons ─────────────────────────────────────── */}
+          {/* Action Grid */}
           <View
             style={styles.buttonSection}
             accessibilityRole="none"
@@ -267,6 +284,8 @@ export default function AssistedTouchPage() {
                       isDwellActive && styles.bigBtnDwellActive,
                     ]}
                     onPress={() => handleSelectAction(action.label)}
+                    onPressIn={() => handlePointerEnter(action)}
+                    onPressOut={handlePointerLeave}
                     onPointerEnter={() => handlePointerEnter(action)}
                     onPointerLeave={handlePointerLeave}
                     accessibilityRole="button"

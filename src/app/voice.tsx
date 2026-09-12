@@ -40,21 +40,34 @@ import {
   AccessShadow,
 } from '@/constants/access-theme';
 
-const PRESET_QUERIES = [
-  'Where is the main service desk?',
-  'What documents do I need today?',
-  'I would like to request staff assistance.',
-  'Can you help me fill out a form?',
-];
+import {
+  useAudioRecorder,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from 'expo-audio';
+import { transcribeAudio } from '@/services/whisper-service';
+
+import { PhraseService } from '@/services/phrase-service';
 
 export default function VoicePage() {
-  const { clearSession } = useSession();
+  const { session, clearSession, broadcastTranslation } = useSession();
   const { announce } = useAudioNav();
   const { width } = useWindowDimensions();
   const isNarrow = width < 600;
+
+  // Dynamically load institution phrases (Bank, Hospital, Govt)
+  const currentInstitution = PhraseService.getInstitutionById(
+    session.institution || 'bank'
+  );
+  const presetQueries = currentInstitution.categories.flatMap((cat) => cat.phrases);
+
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [responseMessage, setResponseMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [isSpeakingResponse, setIsSpeakingResponse] = useState(false);
   const [backHovered, setBackHovered] = useState(false);
 
@@ -106,49 +119,83 @@ export default function VoicePage() {
 
   useEffect(() => {
     announce(
-      'Voice Communication Module. Press the microphone button or type below to speak with the kiosk.'
+      'Voice Communication Module. Press the microphone button or select preset phrases to speak with the kiosk.'
     );
   }, [announce]);
 
   function handleBack() {
     speechEngine.stopSpeaking();
-    speechEngine.stopListening();
+    if (isListening) {
+      audioRecorder.stop().catch(() => {});
+    }
     announce('Returning to communication options');
     clearSession();
     router.replace('/');
   }
 
-  function toggleListening() {
+  async function toggleListening() {
     if (isListening) {
-      speechEngine.stopListening();
-      setIsListening(false);
-      announce('Microphone muted');
+      // Stop recording and transcribe
+      try {
+        setIsListening(false);
+        await audioRecorder.stop();
+        const uri = audioRecorder.uri;
+        announce('Recording stopped. Processing speech transcription...');
+
+        if (uri) {
+          console.log('[expo-audio] Recorded file URI:', uri);
+          setIsTranscribing(true);
+          const text = await transcribeAudio(uri);
+          setIsTranscribing(false);
+          setTranscript(text);
+          setErrorMessage('');
+          handleProcessUserSpeech(text);
+        } else {
+          throw new Error('No audio recording captured.');
+        }
+      } catch (err: any) {
+        setIsListening(false);
+        setIsTranscribing(false);
+        const msg = err?.message || 'Transcription failed, please try again.';
+        setErrorMessage(msg);
+        announce(`Voice error: ${msg}`);
+      }
     } else {
+      // Start recording
       setTranscript('');
       setResponseMessage('');
-      announce('Microphone active. Speak now.');
-      const success = speechEngine.startListening(
-        (text, isFinal) => {
-          setTranscript(text);
-          if (isFinal) {
-            handleProcessUserSpeech(text);
-          }
-        },
-        (error) => {
-          console.warn('STT Error:', error);
-          setIsListening(false);
-          announce(`Voice input error: ${error}`);
-        },
-        { continuous: false }
-      );
-      if (success) {
+      setErrorMessage('');
+      try {
+        const { granted } = await requestRecordingPermissionsAsync();
+        if (!granted) {
+          const errText = 'Microphone permission denied.';
+          setErrorMessage(errText);
+          announce(errText);
+          return;
+        }
+
+        await setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
+        });
+
+        await audioRecorder.prepareToRecordAsync();
+        audioRecorder.record();
         setIsListening(true);
+        announce('Microphone active. Speak now.');
+      } catch (err: any) {
+        const msg = err?.message || 'Failed to start microphone recording.';
+        setErrorMessage(msg);
+        announce(msg);
+        setIsListening(false);
       }
     }
   }
 
   function handleProcessUserSpeech(userText: string) {
     setIsListening(false);
+    broadcastTranslation(userText, 'Voice', 0.95);
+
     let reply = `Thank you. You said: "${userText}". How else can I assist you at the kiosk?`;
 
     const lower = userText.toLowerCase();
@@ -170,6 +217,7 @@ export default function VoicePage() {
 
   function handlePresetSelect(presetText: string) {
     setTranscript(presetText);
+    setErrorMessage('');
     handleProcessUserSpeech(presetText);
   }
 
@@ -291,13 +339,24 @@ export default function VoicePage() {
             </View>
 
             <Text style={styles.micStatusText}>
-              {isListening ? '🎙️ Listening... Speak into the microphone' : 'Tap microphone to speak'}
+              {isListening
+                ? '🎙️ Recording active... Tap again to stop & transcribe'
+                : isTranscribing
+                ? '⏳ Transcribing audio with Whisper AI...'
+                : 'Tap microphone to start recording'}
             </Text>
+
+            {/* Error Message Box */}
+            {Boolean(errorMessage) && (
+              <View style={styles.errorBox} role="alert">
+                <Text style={styles.errorText}>⚠️ {errorMessage}</Text>
+              </View>
+            )}
 
             {/* Transcript Display */}
             {Boolean(transcript) && (
               <View style={styles.transcriptBox} role="status" aria-live="polite">
-                <Text style={styles.transcriptLabel}>You Spoke</Text>
+                <Text style={styles.transcriptLabel}>You Spoke (Transcribed)</Text>
                 <Text style={styles.transcriptText}>{`"${transcript}"`}</Text>
               </View>
             )}
@@ -325,9 +384,11 @@ export default function VoicePage() {
 
           {/* Quick Presets Section */}
           <View style={styles.presetsContainer}>
-            <Text style={styles.presetsHeading}>Or select a common phrase:</Text>
+            <Text style={styles.presetsHeading}>
+              Or select a suggested {currentInstitution.name} phrase:
+            </Text>
             <View style={styles.presetsGrid}>
-              {PRESET_QUERIES.map((query, idx) => (
+              {presetQueries.map((query, idx) => (
                 <Pressable
                   key={idx}
                   onPress={() => handlePresetSelect(query)}
@@ -523,6 +584,20 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: AccessColors.teal + '40',
     gap: 6,
+  },
+  errorBox: {
+    width: '100%',
+    backgroundColor: '#FFEBEE',
+    borderRadius: AccessRadius.md,
+    padding: AccessSpacing.md,
+    borderWidth: 1.5,
+    borderColor: '#EF5350',
+  },
+  errorText: {
+    fontSize: AccessFontSize.sm,
+    fontWeight: AccessFontWeight.semibold,
+    color: '#C62828',
+    lineHeight: 20,
   },
   responseHeader: {
     flexDirection: 'row',

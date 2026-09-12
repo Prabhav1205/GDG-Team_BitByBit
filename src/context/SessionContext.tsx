@@ -5,6 +5,7 @@ import React, {
   useEffect,
   type ReactNode,
 } from 'react';
+import { supabase } from '@/services/supabase-schemes';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -188,20 +189,44 @@ if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<SessionState>(createInitialSession);
 
-  // Listen to BroadcastChannel messages from other browser tabs (e.g. Kiosk tab -> Staff tab)
+  // Listen to BroadcastChannel and Supabase Realtime for cross-tab & cross-device Expo sync
   useEffect(() => {
-    if (!broadcastChan) return;
+    // 1. BroadcastChannel (Browser cross-tab)
+    if (broadcastChan) {
+      broadcastChan.onmessage = (event: MessageEvent) => {
+        const { type, payload } = event.data || {};
+        if (type === 'SYNC_STATE' && payload) {
+          setSession((prev) => ({ ...prev, ...payload }));
+        }
+      };
+    }
 
-    const handleMessage = (event: MessageEvent) => {
-      const { type, payload } = event.data || {};
-      if (type === 'SYNC_STATE' && payload) {
-        setSession((prev) => ({ ...prev, ...payload }));
+    // 2. Supabase Realtime (Expo Go mobile phone -> Staff Counter Laptop PC)
+    let channel: any = null;
+    if (supabase) {
+      try {
+        channel = supabase.channel('kiosk_staff_sync_room');
+        channel
+          .on('broadcast', { event: 'SYNC_STATE' }, (payload: any) => {
+            if (payload?.payload) {
+              setSession((prev) => ({ ...prev, ...payload.payload }));
+            }
+          })
+          .subscribe();
+      } catch {
+        // ignore
       }
-    };
+    }
 
-    broadcastChan.onmessage = handleMessage;
     return () => {
       if (broadcastChan) broadcastChan.onmessage = null;
+      if (supabase && channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {
+          // ignore
+        }
+      }
     };
   }, []);
 
@@ -213,6 +238,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           broadcastChan.postMessage({ type: 'SYNC_STATE', payload: next });
         } catch {
           // ignore postMessage error
+        }
+      }
+      if (supabase) {
+        try {
+          supabase.channel('kiosk_staff_sync_room').send({
+            type: 'broadcast',
+            event: 'SYNC_STATE',
+            payload: next,
+          });
+        } catch {
+          // ignore supabase broadcast error
         }
       }
       return next;

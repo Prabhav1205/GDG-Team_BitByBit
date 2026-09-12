@@ -2,6 +2,20 @@
   "version": "1.0.0",
   "description": "Institutional Accessibility Kiosk - ISL Gesture Configuration",
   "unknown_label": "UNKNOWN",
+<<<<<<< Updated upstream
+=======
+  "rejection_policy": {
+    "confidence_threshold": 0.45,
+    "top_margin": 0.10,
+    "unknown_label": "UNKNOWN",
+    "temporal_smoothing": {
+      "window_size": 5,
+      "majority_ratio": 0.60,
+      "min_consecutive_frames": 3
+    }
+  },
+  "architecture_note": "ISL is a distinct language. 'localPhrase' provides the institutional response text in different spoken languages (en/hi/mr). Regional variants document regional signing differences within ISL itself.",
+>>>>>>> Stashed changes
   "gestures": [
     {
       "id": "HELP",

@@ -1,6 +1,11 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
+<<<<<<< Updated upstream
+=======
+const LOCAL_LAN_IP = '192.168.0.102';
+
+>>>>>>> Stashed changes
 export function getApiBaseUrl(): string {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, '');

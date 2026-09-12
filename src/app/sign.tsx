@@ -119,49 +119,6 @@ function buildMediapipeWebViewHtml(apiBaseUrl: string): string {
       [5,9],[9,13],[13,17]
     ];
 
-    // ── Rule-based offline gesture classifier ──────────────────────────────
-    // Determines if fingers are extended relative to their MCP joints.
-    // Used as fallback when API is unreachable.
-    function getExtendedFingers(lm) {
-      // Returns array of booleans [thumb, index, middle, ring, pinky]
-      // Tips: 4, 8, 12, 16, 20  |  PIP: 3, 7, 11, 15, 19  |  MCP: 2, 6, 10, 14, 18
-      const tips = [4, 8, 12, 16, 20];
-      const pips = [3, 7, 11, 15, 19];
-      const mcps = [2, 6, 10, 14, 18];
-      const wrist = lm[0];
-      return tips.map((tip, i) => {
-        const tipY = lm[tip].y;
-        const pipY = lm[pips[i]].y;
-        if (i === 0) {
-          // Thumb: compare x distance from wrist instead
-          return Math.abs(lm[tip].x - lm[mcps[i]].x) > 0.06;
-        }
-        return tipY < pipY - 0.02;
-      });
-    }
-
-    function classifyOffline(lm) {
-      if (!lm || lm.length < 21) return null;
-      const [thumb, idx, mid, ring, pinky] = getExtendedFingers(lm);
-      const allFolded = !thumb && !idx && !mid && !ring && !pinky;
-      const allExtended = thumb && idx && mid && ring && pinky;
-      const peaceSign = !thumb && idx && mid && !ring && !pinky;
-      const pointingUp = !thumb && idx && !mid && !ring && !pinky;
-      const thumbUp = thumb && !idx && !mid && !ring && !pinky;
-      const wristY = lm[0].y;
-
-      if (allExtended) return { gesture: 'WHERE', confidence: 0.72 };       // Open palm
-      if (peaceSign) return { gesture: 'YES', confidence: 0.70 };            // Peace/V sign
-      if (allFolded) return { gesture: 'NO', confidence: 0.68 };             // Fist
-      if (pointingUp && wristY > 0.5) return { gesture: 'HELP', confidence: 0.68 };
-      if (thumbUp) return { gesture: 'FINISH', confidence: 0.66 };           // Thumbs up
-      if (thumb && idx && !mid && !ring && !pinky) return { gesture: 'MONEY', confidence: 0.65 };
-      if (!thumb && !idx && !mid && ring && pinky) return { gesture: 'APPOINTMENT', confidence: 0.64 };
-      if (thumb && idx && mid && !ring && !pinky) return { gesture: 'FORM', confidence: 0.63 };
-      if (thumb && idx && mid && ring && !pinky) return { gesture: 'THANK_YOU', confidence: 0.62 };
-      if (!thumb && idx && !mid && !ring && pinky) return { gesture: 'ID', confidence: 0.61 };
-      return null;
-    }
 
     let lastPredictTime = 0;
     let isPredicting = false;
@@ -171,54 +128,35 @@ function buildMediapipeWebViewHtml(apiBaseUrl: string): string {
       if (isPredicting) return;
       isPredicting = true;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
       try {
         const res = await fetch(API_BASE_URL + '/predict', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ landmarks: pts, confidence_threshold: 0.30 }),
+          body: JSON.stringify({ landmarks: pts }),
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
         if (res.ok) {
           apiOnline = true;
           const data = await res.json();
-          let finalGesture = data.gesture;
-          let finalConf = data.confidence || 0;
+          const gesture = data.gesture || 'UNKNOWN';
+          const confidence = data.confidence || 0;
+          const margin = data.margin || 0;
+          const accepted = Boolean(data.accepted && gesture !== 'UNKNOWN');
 
-          // If UNKNOWN but raw_probabilities has a decent candidate, use it
-          if ((!finalGesture || finalGesture === 'UNKNOWN') && data.raw_probabilities) {
-            const entries = Object.entries(data.raw_probabilities)
-              .filter(([k]) => k !== 'UNKNOWN')
-              .sort((a, b) => b[1] - a[1]);
-            if (entries.length > 0 && entries[0][1] >= 0.25) {
-              finalGesture = entries[0][0];
-              finalConf = entries[0][1];
-            }
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'FRAME_PREDICTION',
+              gesture: gesture,
+              confidence: confidence,
+              margin: margin,
+              accepted: accepted,
+            }));
           }
 
-          if (finalGesture && finalGesture !== 'UNKNOWN' && finalConf > 0.25) {
-            showGesture(finalGesture, finalConf);
-            if (window.ReactNativeWebView) {
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'gesture',
-                gesture: finalGesture,
-                confidence: finalConf,
-              }));
-            }
-          } else {
-            // Fallback to rule-based when model is uncertain
-            const offline = classifyOffline(pts);
-            if (offline) {
-              showGesture(offline.gesture + ' \u25b3', offline.confidence);
-              if (window.ReactNativeWebView) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: 'gesture',
-                  gesture: offline.gesture,
-                  confidence: offline.confidence,
-                }));
-              }
-            }
+          if (accepted) {
+            showGesture(gesture, confidence);
           }
         } else {
           apiOnline = false;
@@ -226,18 +164,6 @@ function buildMediapipeWebViewHtml(apiBaseUrl: string): string {
       } catch(e) {
         clearTimeout(timeoutId);
         apiOnline = false;
-        // Fallback to rule-based when API is offline
-        const offline = classifyOffline(pts);
-        if (offline) {
-          showGesture(offline.gesture + ' (offline)', offline.confidence);
-          if (window.ReactNativeWebView) {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'gesture',
-              gesture: offline.gesture,
-              confidence: offline.confidence,
-            }));
-          }
-        }
       } finally {
         isPredicting = false;
       }
@@ -326,13 +252,16 @@ function buildMediapipeWebViewHtml(apiBaseUrl: string): string {
             }
 
             const now = Date.now();
-            if (now - lastPredictTime > 400) {
+            if (now - lastPredictTime > 300) {
               lastPredictTime = now;
               const pts = lm.map(p => ({ x: p.x, y: p.y, z: p.z || 0 }));
               callApi(pts);
             }
           } else {
             setStatus('\uD83D\uDD0D Show your hand to camera...', '#10B981');
+            if (window.ReactNativeWebView) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'NO_HAND' }));
+            }
           }
         });
 
@@ -415,6 +344,7 @@ export default function SignLanguagePage() {
   const [activeGesture, setActiveGesture] = useState<string | null>(null);
   const [confidence, setConfidence] = useState<number | null>(null);
   const [status, setStatus] = useState<'idle' | 'scanning' | 'recognized'>('idle');
+  const [stabilizingGesture, setStabilizingGesture] = useState<string | null>(null);
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const [sentMessage, setSentMessage] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
@@ -549,7 +479,7 @@ export default function SignLanguagePage() {
           // Send landmarks to FastAPI model backend for inference
           if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
             const now = Date.now();
-            if (now - lastPredictTime.current > 350) {
+            if (now - lastPredictTime.current > 300) {
               lastPredictTime.current = now;
               const pts = results.multiHandLandmarks[0].map((p: any) => ({
                 x: p.x,
@@ -558,6 +488,8 @@ export default function SignLanguagePage() {
               }));
               sendLandmarksToAPI(pts);
             }
+          } else {
+            handleNoHand();
           }
         });
 
@@ -679,24 +611,113 @@ export default function SignLanguagePage() {
     setSentMessage(false);
   }
 
+  interface FramePrediction {
+    gesture: string;
+    confidence: number;
+    margin: number;
+    accepted: boolean;
+    timestamp: number;
+  }
+
+  const recentFramesRef = useRef<FramePrediction[]>([]);
   const lastRecognizedGesture = useRef<string | null>(null);
   const lastSpokenTime = useRef<number>(0);
 
+<<<<<<< Updated upstream
   // Handle recognized gesture (called from both web and mobile paths)
   function handleRecognizedGesture(gestureId: string, conf: number) {
     const gObj = ISL_GESTURES.find((g) => g.id === gestureId);
     const phrase = gObj ? gObj.phrase : gestureId;
     setActiveGesture(gestureId);
+=======
+  // Confirms a stabilized gesture, updates UI, and triggers speech & kiosk broadcast (once per gesture)
+  function confirmRecognizedGesture(gestureId: string, conf: number) {
+    const cleanId = gestureId.replace(/\s*(△|\(offline\)).*$/i, '').trim();
+    const gObj = ISL_GESTURES.find((g) => g.id === cleanId || g.id === gestureId);
+    const phrase = gObj ? (gObj.localPhrase[lang] ?? gObj.localPhrase.en) : cleanId;
+    setActiveGesture(cleanId);
+>>>>>>> Stashed changes
     setRecognizedText(phrase);
     setConfidence(conf);
     setStatus('recognized');
+    setStabilizingGesture(null);
 
     const now = Date.now();
+<<<<<<< Updated upstream
     if (gestureId !== lastRecognizedGesture.current || now - lastSpokenTime.current > 4000) {
       lastRecognizedGesture.current = gestureId;
+=======
+    if (cleanId !== lastRecognizedGesture.current || now - lastSpokenTime.current > 3500) {
+      lastRecognizedGesture.current = cleanId;
+>>>>>>> Stashed changes
       lastSpokenTime.current = now;
       speechEngine.speak(phrase, { lang: session.language });
       broadcastTranslation(phrase, 'Sign Language', conf);
+    }
+  }
+
+  // Temporal Smoothing Filter:
+  // Requires at least 3 matching frames out of the last 5 frames window (60% agreement)
+  // with average confidence >= 0.65 before confirming the gesture.
+  function processPredictionFrame(pred: {
+    gesture: string;
+    confidence: number;
+    margin?: number;
+    accepted: boolean;
+  }) {
+    const now = Date.now();
+    const margin = pred.margin ?? 0;
+
+    recentFramesRef.current.push({
+      gesture: pred.gesture,
+      confidence: pred.confidence,
+      margin,
+      accepted: pred.accepted,
+      timestamp: now,
+    });
+
+    if (recentFramesRef.current.length > 5) {
+      recentFramesRef.current.shift();
+    }
+
+    const buffer = recentFramesRef.current;
+    // Filter only confident, accepted, non-UNKNOWN predictions
+    const validFrames = buffer.filter(
+      (f) => f.accepted && f.gesture !== 'UNKNOWN' && f.confidence >= 0.65
+    );
+
+    if (validFrames.length === 0) {
+      setStabilizingGesture(null);
+      return;
+    }
+
+    // Group valid frames by gesture
+    const counts: Record<string, { count: number; totalConf: number }> = {};
+    for (const f of validFrames) {
+      if (!counts[f.gesture]) counts[f.gesture] = { count: 0, totalConf: 0 };
+      counts[f.gesture].count += 1;
+      counts[f.gesture].totalConf += f.confidence;
+    }
+
+    const sorted = Object.entries(counts).sort((a, b) => b[1].count - a[1].count);
+    const [leadGesture, stats] = sorted[0];
+    const avgConf = stats.totalConf / stats.count;
+
+    // Temporal confirmation: at least 3 matching frames in the 5-frame window
+    if (stats.count >= 3 && avgConf >= 0.65) {
+      confirmRecognizedGesture(leadGesture, avgConf);
+    } else if (stats.count >= 1) {
+      // Subtle stabilizing state (does NOT speak or broadcast yet)
+      setStabilizingGesture(leadGesture);
+    }
+  }
+
+  function handleNoHand() {
+    recentFramesRef.current = [];
+    setStabilizingGesture(null);
+    lastRecognizedGesture.current = null;
+    if (status === 'recognized') {
+      setStatus('scanning');
     }
   }
 
@@ -707,38 +728,25 @@ export default function SignLanguagePage() {
     isPredicting.current = true;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
     try {
       const url = getApiBaseUrl();
       const res = await fetch(`${url}/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          landmarks,
-          confidence_threshold: 0.28,
-        }),
+        body: JSON.stringify({ landmarks }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
 
       if (res.ok) {
         const data = await res.json();
-        let finalGesture = data.gesture;
-        let finalConf: number = data.confidence || 0;
-
-        if ((!finalGesture || finalGesture === 'UNKNOWN') && data.raw_probabilities) {
-          const sorted = Object.entries(data.raw_probabilities)
-            .filter(([k]) => k !== 'UNKNOWN')
-            .sort((a: any, b: any) => b[1] - a[1]);
-          if (sorted.length > 0 && (sorted[0][1] as number) >= 0.22) {
-            finalGesture = sorted[0][0];
-            finalConf = sorted[0][1] as number;
-          }
-        }
-
-        if (finalGesture && finalGesture !== 'UNKNOWN') {
-          handleRecognizedGesture(finalGesture, finalConf);
-        }
+        processPredictionFrame({
+          gesture: data.gesture || 'UNKNOWN',
+          confidence: data.confidence || 0,
+          margin: data.margin || 0,
+          accepted: Boolean(data.accepted && data.gesture !== 'UNKNOWN'),
+        });
       }
     } catch (err) {
       console.warn('Prediction API call failed:', err);
@@ -747,37 +755,24 @@ export default function SignLanguagePage() {
     }
   }
 
-  // Predict directly using canonical 63-element feature vector
+  // Predict directly using canonical 63-element feature vector (for test buttons)
   async function sendFeaturesToAPI(features: number[]) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
     try {
       const url = getApiBaseUrl();
       const res = await fetch(`${url}/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ features, confidence_threshold: 0.28 }),
+        body: JSON.stringify({ features }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
 
       if (res.ok) {
         const data = await res.json();
-        let finalGesture = data.gesture;
-        let finalConf: number = data.confidence || 0;
-
-        if ((!finalGesture || finalGesture === 'UNKNOWN') && data.raw_probabilities) {
-          const sorted = Object.entries(data.raw_probabilities)
-            .filter(([k]) => k !== 'UNKNOWN')
-            .sort((a: any, b: any) => b[1] - a[1]);
-          if (sorted.length > 0 && (sorted[0][1] as number) >= 0.22) {
-            finalGesture = sorted[0][0];
-            finalConf = sorted[0][1] as number;
-          }
-        }
-
-        if (finalGesture && finalGesture !== 'UNKNOWN') {
-          handleRecognizedGesture(finalGesture, finalConf);
+        if (data.accepted && data.gesture !== 'UNKNOWN') {
+          confirmRecognizedGesture(data.gesture, data.confidence || 0.95);
         }
       }
     } catch (err) {
@@ -809,6 +804,7 @@ export default function SignLanguagePage() {
     setRecognizedText('');
     setActiveGesture(null);
     setConfidence(null);
+    handleNoHand();
     setStatus(cameraActive ? 'scanning' : 'idle');
     setSentMessage(false);
   }
@@ -822,10 +818,19 @@ export default function SignLanguagePage() {
 
   const statusText =
     status === 'recognized'
+<<<<<<< Updated upstream
       ? `✅ ISL Gesture Recognized: ${activeGesture} ${confidence ? `(${(confidence * 100).toFixed(0)}% confidence)` : ''}`
       : cameraActive
       ? '🎥 Live Camera active — scanning hand landmarks...'
       : '⏳ Camera paused. Tap Start Camera Feed or select a gesture.';
+=======
+      ? `✅ ISL Sign Confirmed: ${activeGesture} ${confidence ? `(${(confidence * 100).toFixed(0)}% confidence)` : ''}`
+      : stabilizingGesture
+        ? `⏳ Stabilizing sign: ${stabilizingGesture}... (hold steady)`
+        : cameraActive
+          ? (lang === 'hi' ? '🎥 लाइव कैमरा सक्रिय — हाथ के निशान स्कैन हो रहे हैं...' : lang === 'mr' ? '🎥 लाइव कॅमेरा सक्रिय — हाताचे ठिपके स्कॅन होत आहेत...' : '🎥 Live Camera active — scanning hand landmarks...')
+          : (lang === 'hi' ? '⏳ कैमरा रुका हुआ है। कैमरा शुरू करें या इशारा चुनें।' : lang === 'mr' ? '⏳ कॅमेरा थांबला आहे. कॅमेरा सुरू करा किंवा खूण निवडा.' : '⏳ Camera paused. Tap Start Camera Feed or select a gesture.');
+>>>>>>> Stashed changes
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -917,6 +922,7 @@ export default function SignLanguagePage() {
                     onMessage={(event) => {
                       try {
                         const msg = JSON.parse(event.nativeEvent.data);
+<<<<<<< Updated upstream
                         // Mobile path: WebView already called API directly,
                         // result arrives as { type: 'gesture', gesture, confidence }
                         if (msg.type === 'gesture' && msg.gesture) {
@@ -924,6 +930,24 @@ export default function SignLanguagePage() {
                         }
                         // Legacy landmark path (fallback)
                         if (msg.type === 'landmarks' && msg.landmarks) {
+=======
+                        if (msg.type === 'FRAME_PREDICTION') {
+                          processPredictionFrame({
+                            gesture: msg.gesture,
+                            confidence: msg.confidence,
+                            margin: msg.margin,
+                            accepted: msg.accepted,
+                          });
+                        } else if (msg.type === 'NO_HAND') {
+                          handleNoHand();
+                        } else if (msg.type?.toUpperCase() === 'GESTURE' && msg.gesture) {
+                          processPredictionFrame({
+                            gesture: msg.gesture,
+                            confidence: msg.confidence || 0.70,
+                            accepted: true,
+                          });
+                        } else if (msg.type?.toUpperCase() === 'LANDMARKS' && msg.landmarks) {
+>>>>>>> Stashed changes
                           sendLandmarksToAPI(msg.landmarks);
                         }
                       } catch (err) {

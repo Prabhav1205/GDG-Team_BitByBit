@@ -132,6 +132,7 @@ class PredictRequest(BaseModel):
 class PredictResponse(BaseModel):
     gesture: str
     confidence: float
+    margin: Optional[float] = None
     accepted: bool
     phrase: str
     raw_probabilities: Optional[Dict[str, float]] = None
@@ -149,6 +150,7 @@ class ModelInfoResponse(BaseModel):
     model_version: str
     supported_gestures: List[str]
     phrase_mappings: Dict[str, str]
+    rejection_policy: Optional[Dict[str, Any]] = None
     metadata: Dict[str, Any]
 
 
@@ -188,18 +190,25 @@ async def get_health():
 
 @app.get("/model", response_model=ModelInfoResponse, tags=["Introspection"])
 async def get_model_info():
-    """Returns active model metadata, supported gesture vocabulary, and phrase dictionary."""
+    """Returns active model metadata, supported gesture vocabulary, rejection policy, and phrase dictionary."""
     if not predictor:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Predictor engine is uninitialized",
         )
 
+    rejection_policy = {
+        "confidence_threshold": getattr(predictor, "confidence_threshold", 0.65),
+        "top_margin": getattr(predictor, "top_margin", 0.15),
+        "unknown_label": getattr(predictor, "unknown_label", "UNKNOWN"),
+    }
+
     return ModelInfoResponse(
         model_loaded=predictor.is_loaded,
         model_version=predictor.metadata.get("model_version", "1.0.0"),
         supported_gestures=predictor.get_supported_gestures(),
         phrase_mappings=predictor.phrase_map,
+        rejection_policy=rejection_policy,
         metadata=predictor.metadata,
     )
 
@@ -210,7 +219,7 @@ async def predict_gesture(payload: PredictRequest):
 
     Used by the React frontend /sign route:
     Pass landmark coordinates captured in the browser.
-    Returns the recognized gesture, confidence score, and confirmation phrase.
+    Returns the recognized gesture, confidence score, margin, and confirmation phrase.
     """
     if not predictor:
         raise HTTPException(
@@ -230,10 +239,10 @@ async def predict_gesture(payload: PredictRequest):
             detail="Payload must contain either 'landmarks' (21 points) or 'features' (63 floats).",
         )
 
-    # Apply temporary confidence threshold override if supplied
+    # Apply temporary confidence threshold override if supplied (enforcing safety floor of 0.50)
     original_threshold = predictor.confidence_threshold
     if payload.confidence_threshold is not None:
-        predictor.confidence_threshold = payload.confidence_threshold
+        predictor.confidence_threshold = max(0.50, payload.confidence_threshold)
 
     try:
         if payload.landmarks is not None:

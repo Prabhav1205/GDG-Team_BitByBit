@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import './App.css';
 import {
   Activity,
   Award,
@@ -107,6 +108,28 @@ export default function App() {
   const [supervisorNoteInput, setSupervisorNoteInput] = useState('');
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [latestStaffBroadcast, setLatestStaffBroadcast] = useState<string | null>(null);
+  const [emergencyAlert, setEmergencyAlert] = useState<string | null>(null);
+
+  function playAlertChime(isEmergency = false) {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = isEmergency ? 'sawtooth' : 'sine';
+      osc.frequency.setValueAtTime(isEmergency ? 880 : 587.33, ctx.currentTime);
+      if (isEmergency) {
+        osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+      }
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.45);
+    } catch {
+      // ignore audio context restrictions
+    }
+  }
 
   // Sync with BroadcastChannel & Supabase Realtime
   useEffect(() => {
@@ -115,9 +138,26 @@ export default function App() {
       try {
         bc = new BroadcastChannel('kiosk_staff_sync_channel');
         bc.onmessage = (event) => {
-          const { payload } = event.data || {};
+          const { payload, type } = event.data || {};
+          if (type === 'STAFF_ALERT') {
+            const alertMsg = payload?.text || 'Citizen requested immediate in-person assistance';
+            playAlertChime(true);
+            setEmergencyAlert(`🚨 PRIORITY CITIZEN ALERT: "${alertMsg}"`);
+          }
           if (payload) {
-            if (payload.liveTranslations) setTranslations(payload.liveTranslations);
+            if (payload.liveTranslations) {
+              setTranslations(payload.liveTranslations);
+              const top = payload.liveTranslations[0];
+              const isHelp =
+                top?.text?.toLowerCase().includes('staff') ||
+                top?.text?.toLowerCase().includes('help') ||
+                top?.text?.toLowerCase().includes('nurse') ||
+                top?.text?.toLowerCase().includes('assistance') ||
+                top?.modeLabel?.toLowerCase().includes('staff') ||
+                top?.modeLabel?.toLowerCase().includes('alert');
+              playAlertChime(isHelp);
+              if (isHelp) setEmergencyAlert(`⚠️ Citizen requested immediate staff assistance: "${top.text}"`);
+            }
             if (payload.eligibilityMatches) setEligibility(payload.eligibilityMatches);
             if (payload.sessionLogs) setLogs(payload.sessionLogs);
           }
@@ -129,10 +169,28 @@ export default function App() {
 
     const channel = supabase.channel('kiosk_staff_sync_room');
     channel
+      .on('broadcast', { event: 'STAFF_ALERT' }, (payload: any) => {
+        const data = payload?.payload;
+        const alertMsg = data?.text || 'Citizen requested immediate in-person assistance';
+        playAlertChime(true);
+        setEmergencyAlert(`🚨 PRIORITY CITIZEN ALERT: "${alertMsg}"`);
+      })
       .on('broadcast', { event: 'SYNC_STATE' }, (payload: any) => {
         if (payload?.payload) {
           const data = payload.payload;
-          if (data.liveTranslations) setTranslations(data.liveTranslations);
+          if (data.liveTranslations) {
+            setTranslations(data.liveTranslations);
+            const top = data.liveTranslations[0];
+            const isHelp =
+              top?.text?.toLowerCase().includes('staff') ||
+              top?.text?.toLowerCase().includes('help') ||
+              top?.text?.toLowerCase().includes('nurse') ||
+              top?.text?.toLowerCase().includes('assistance') ||
+              top?.modeLabel?.toLowerCase().includes('staff') ||
+              top?.modeLabel?.toLowerCase().includes('alert');
+            playAlertChime(isHelp);
+            if (isHelp) setEmergencyAlert(`⚠️ Citizen requested immediate staff assistance: "${top.text}"`);
+          }
           if (data.eligibilityMatches) setEligibility(data.eligibilityMatches);
           if (data.sessionLogs) setLogs(data.sessionLogs);
         }
@@ -238,6 +296,66 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* ── Emergency Staff Alert Banner ────────────────────────────── */}
+      {emergencyAlert && (
+        <div
+          className="emergency-alert-card"
+          style={{
+            backgroundColor: '#FEF2F2',
+            borderBottom: '2px solid #EF4444',
+            padding: '16px 32px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            color: '#991B1B',
+            zIndex: 100,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                backgroundColor: '#EF4444',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '18px',
+              }}
+            >
+              ⚠️
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', letterSpacing: '-0.2px' }}>
+                PRIORITY CITIZEN ASSISTANCE REQUESTED
+              </div>
+              <div style={{ fontSize: '13px', color: '#B91C1C', marginTop: '2px' }}>
+                {emergencyAlert}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setEmergencyAlert(null)}
+            style={{
+              padding: '8px 18px',
+              borderRadius: '8px',
+              backgroundColor: '#EF4444',
+              color: '#FFFFFF',
+              border: 'none',
+              fontWeight: '700',
+              fontSize: '13px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+            }}
+          >
+            Acknowledge & Dismiss
+          </button>
+        </div>
+      )}
 
       {/* ── Sub Navigation Bar ─────────────────────────────────────── */}
       <div style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E2E8F0', padding: '12px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>

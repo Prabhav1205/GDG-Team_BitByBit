@@ -27,9 +27,11 @@ import { useSession, type AccessibilitySettings } from '@/context/SessionContext
 import { useAccessTheme } from '@/context/AccessThemeContext';
 import {
   AccessColors,
+  AccessCategoryColors,
   AccessSpacing,
   AccessRadius,
   AccessFontSize,
+  AccessFontFamily,
   AccessFontWeight,
   AccessShadow,
 } from '@/constants/access-theme';
@@ -39,6 +41,7 @@ import {
   type LangCode,
 } from '@/constants/i18n';
 import { speechEngine } from '@/services/speech-engine';
+import { router } from 'expo-router';
 
 // ── Action buttons ─────────────────────────────────────────────────────────
 
@@ -395,29 +398,12 @@ export default function AssistedTouchPage() {
               ]}
               onPress={() => handleSelectAction(ACTIONS[scanIndex])}
               accessibilityRole="button"
-              accessibilityLabel={t.switchTriggerPrompt(activeScanLabel)}
-            >
-              <Text style={styles.switchTriggerEmoji}>🔴</Text>
-              <Text style={styles.switchTriggerText}>
-                {t.switchTriggerPrompt(activeScanLabel)}
-              </Text>
-            </Pressable>
-          )}
-
-          {/* Single Switch Trigger Banner for Mobile & Switch Users */}
-          {settings.switchScanning && (
-            <Pressable
-              style={({ pressed }: any) => [
-                styles.switchTriggerBtn,
-                pressed && styles.switchTriggerBtnPressed,
-              ]}
-              onPress={() => handleSelectAction(ACTIONS[scanIndex])}
-              accessibilityRole="button"
               accessibilityLabel={t.switchTriggerTap(
                 ACTIONS[scanIndex].emoji,
                 activeScanLabel
               )}
             >
+              <Text style={styles.switchTriggerEmoji}>🔴</Text>
               <Text style={styles.switchTriggerText}>
                 {t.switchTriggerTap(ACTIONS[scanIndex].emoji, activeScanLabel)}
               </Text>
@@ -515,6 +501,29 @@ export default function AssistedTouchPage() {
               );
             })}
           </View>
+
+          {/* ── Government Schemes Gateway Card ──────────────────────── */}
+          <Pressable
+            onPress={() => router.push('/eligibility')}
+            style={({ pressed }) => [
+              styles.schemeGatewayCard,
+              pressed && styles.schemeGatewayCardPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Explore Government Schemes and Eligibility Matcher"
+            testID="assisted-touch-open-schemes"
+          >
+            <View style={styles.schemeGatewayIconWrap}>
+              <Text style={styles.schemeGatewayEmoji}>🏛️</Text>
+            </View>
+            <View style={styles.schemeGatewayTextCol}>
+              <Text style={styles.schemeGatewayTitle}>Government Schemes & Eligibility</Text>
+              <Text style={styles.schemeGatewayDesc}>
+                Explore disability grants, assistive devices (ADIP), healthcare, pensions & scholarships in one place.
+              </Text>
+            </View>
+            <Text style={styles.schemeGatewayArrow}>Explore →</Text>
+          </Pressable>
 
           {/* ── Explanation ────────────────────────────────────────────── */}
           <View style={styles.explainBox}>
@@ -771,6 +780,57 @@ function useStyles() {
     fontFamily: AccessFontFamily.regular,
     color: AccessColors.textSecondary,
     lineHeight: 18,
+  },
+
+  // Scheme gateway card
+  schemeGatewayCard: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: AccessSpacing.md,
+    backgroundColor: AccessColors.cardDefault,
+    borderWidth: 1.5,
+    borderColor: AccessColors.tealBorder,
+    borderRadius: AccessRadius.lg,
+    padding: AccessSpacing.lg,
+    ...AccessShadow.sm,
+  },
+  schemeGatewayCardPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.99 }],
+  },
+  schemeGatewayIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: AccessRadius.md,
+    backgroundColor: AccessColors.tealFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  schemeGatewayEmoji: {
+    fontSize: 24,
+  },
+  schemeGatewayTextCol: {
+    flex: 1,
+    gap: 4,
+  },
+  schemeGatewayTitle: {
+    fontSize: AccessFontSize.md,
+    fontFamily: AccessFontFamily.semibold,
+    color: AccessColors.navy,
+  },
+  schemeGatewayDesc: {
+    fontSize: AccessFontSize.xs,
+    fontFamily: AccessFontFamily.regular,
+    color: AccessColors.textSecondary,
+    lineHeight: 18,
+  },
+  schemeGatewayArrow: {
+    fontSize: AccessFontSize.sm,
+    fontFamily: AccessFontFamily.bold,
+    color: AccessColors.tealDark,
+    paddingHorizontal: AccessSpacing.sm,
+    paddingVertical: AccessSpacing.xs,
   },
 }), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
 }

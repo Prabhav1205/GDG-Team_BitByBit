@@ -32,22 +32,13 @@ const getModes = (ui: typeof UI_STRINGS.en) => [
     shortcutNumber: 1,
   },
   {
-    id: 'voice' as CommunicationMode,
-    iconName: 'voice' as const,
-    title: ui.modeVoiceTitle ?? 'Voice',
-    description: ui.modeVoiceDesc ?? 'Speak naturally using your voice',
-    route: '/voice' as const,
-    testID: 'mode-voice',
-    shortcutNumber: 2,
-  },
-  {
     id: 'text' as CommunicationMode,
     iconName: 'text' as const,
     title: ui.modeTextTitle ?? 'Text',
     description: ui.modeTextDesc ?? 'Type what you need to communicate',
     route: '/text' as const,
     testID: 'mode-text',
-    shortcutNumber: 3,
+    shortcutNumber: 2,
   },
   {
     id: 'assisted-touch' as CommunicationMode,
@@ -56,7 +47,7 @@ const getModes = (ui: typeof UI_STRINGS.en) => [
     description: ui.modeAssistedDesc ?? 'Use simplified controls with larger touch targets',
     route: '/assisted-touch' as const,
     testID: 'mode-assisted-touch',
-    shortcutNumber: 4,
+    shortcutNumber: 3,
   },
 ] as const;
 
@@ -100,19 +91,21 @@ export function ModeSelector() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modes]);
 
-  // Chunk modes into rows of 2 for the 2-column layout
-  const rows = isNarrow
-    ? modes.map((m) => [m])
-    : [
-        [modes[0], modes[1]],
-        [modes[2], modes[3]],
-      ];
+  // Chunk modes dynamically into rows
+  const rows: (typeof modes[number])[][] = [];
+  if (isNarrow) {
+    modes.forEach((m) => rows.push([m]));
+  } else {
+    for (let i = 0; i < modes.length; i += 2) {
+      rows.push(modes.slice(i, i + 2));
+    }
+  }
 
   return (
     <View
       style={styles.container}
       role="group"
-      accessibilityLabel="Communication mode options. Press keys 1 through 4 to choose."
+      accessibilityLabel="Communication mode options. Press keys 1 through 3 to choose."
     >
       {rows.map((row, rowIndex) => (
         <View

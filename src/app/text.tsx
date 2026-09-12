@@ -13,6 +13,7 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -392,9 +393,14 @@ function useStyles() {
     opacity: 0.7,
   },
   backBtnFocused: {
-    outlineWidth: 2,
-    outlineColor: AccessColors.teal,
-    outlineStyle: 'solid',
+    ...Platform.select({
+      web: {
+        outlineWidth: 2,
+        outlineColor: AccessColors.teal,
+        outlineStyle: 'solid',
+      },
+      default: {},
+    }),
   } as any,
   backBtnLabel: {
     fontSize: AccessFontSize.sm,

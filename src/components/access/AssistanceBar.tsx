@@ -15,6 +15,7 @@ import {
   Pressable,
   StyleSheet,
   Animated,
+  Platform,
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,7 +26,9 @@ import { BlurView } from 'expo-blur';
 import { KioskIcon } from './KioskIcon';
 import { LanguageSelectorModal } from './LanguageSelectorModal';
 import { useSession } from '@/context/SessionContext';
-import { LANGUAGES, UI_STRINGS } from '@/constants/i18n';
+import { useAudioNav } from '@/context/AudioNavContext';
+import { speechEngine } from '@/services/speech-engine';
+import { LANGUAGES, UI_STRINGS, toSafeLangCode } from '@/constants/i18n';
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -34,9 +37,12 @@ export function AssistanceBar() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isNarrow = width < 600;
-  const { session } = useSession();
-  const currentLang = LANGUAGES[session.language] ?? LANGUAGES.en;
-  const ui = UI_STRINGS[session.language] ?? UI_STRINGS.en;
+  const { session, requestStaffAssistance } = useSession();
+  const { announce } = useAudioNav();
+  const lang = toSafeLangCode(session.language);
+  const speechCode = LANGUAGES[lang]?.speechCode || 'en-IN';
+  const currentLang = LANGUAGES[lang] ?? LANGUAGES.en;
+  const ui = UI_STRINGS[lang] ?? UI_STRINGS.en;
 
   const [staffRequested, setStaffRequested] = useState(false);
   const [staffHovered, setStaffHovered] = useState(false);
@@ -47,6 +53,24 @@ export function AssistanceBar() {
   function handleRequestStaff() {
     if (staffRequested) return;
     setStaffRequested(true);
+
+    const modeName = session.communicationMode ? String(session.communicationMode) : 'Main Menu';
+    const alertMsg = `Citizen at Kiosk requested immediate in-person staff assistance (${modeName})`;
+    
+    // Broadcast instantly to staff dashboard
+    requestStaffAssistance(alertMsg, modeName);
+
+    // Provide immediate spoken & screen-reader confirmation
+    const spokenConfirmation =
+      lang === 'hi'
+        ? 'स्टाफ सहायता अनुरोध भेज दिया गया है। एक कर्मचारी आपकी मदद के लिए आ रहा है।'
+        : lang === 'mr'
+        ? 'कर्मचारी मदतीची विनंती पाठवली आहे. एक कर्मचारी आपल्या मदतीसाठी येत आहे.'
+        : 'Staff assistance requested. An officer is on their way to assist you.';
+
+    speechEngine.speak(spokenConfirmation, { lang: speechCode });
+    announce(spokenConfirmation, true);
+
     Animated.sequence([
       Animated.spring(staffScaleAnim, { toValue: 0.95, useNativeDriver: true, speed: 30, bounciness: 0 }),
       Animated.spring(staffScaleAnim, { toValue: 1.04, useNativeDriver: true, speed: 25, bounciness: 5 }),
@@ -309,10 +333,15 @@ function useStyles() {
   },
   staffBtnPressed: { opacity: 0.85 },
   staffBtnFocused: {
-    outlineWidth: 3,
-    outlineColor: AccessColors.focusRing,
-    outlineStyle: 'solid',
-    outlineOffset: 2,
+    ...Platform.select({
+      web: {
+        outlineWidth: 3,
+        outlineColor: AccessColors.focusRing,
+        outlineStyle: 'solid',
+        outlineOffset: 2,
+      },
+      default: {},
+    }),
   } as any,
   staffBtnLabel: {
     fontSize: AccessFontSize.sm,
@@ -370,9 +399,14 @@ function useStyles() {
     borderColor: AccessColors.borderLight,
   },
   languageBtnFocused: {
-    outlineWidth: 2,
-    outlineColor: AccessColors.focusRing,
-    outlineStyle: 'solid',
+    ...Platform.select({
+      web: {
+        outlineWidth: 2,
+        outlineColor: AccessColors.focusRing,
+        outlineStyle: 'solid',
+      },
+      default: {},
+    }),
   } as any,
   languageBtnLabel: {
     fontSize: AccessFontSize.xs,

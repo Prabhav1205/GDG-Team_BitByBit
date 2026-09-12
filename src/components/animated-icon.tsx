@@ -5,7 +5,6 @@ import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
 const DURATION = 4000;
 
 export function AnimatedSplashOverlay() {
@@ -61,7 +60,7 @@ export function AnimatedSplashOverlay() {
 
 const keyframe = new Keyframe({
   0: {
-    transform: [{ scale: INITIAL_SCALE_FACTOR }],
+    transform: [{ scale: 8 }],
   },
   100: {
     transform: [{ scale: 1 }],
@@ -133,7 +132,7 @@ const styles = StyleSheet.create({
   },
   background: {
     borderRadius: 40,
-    experimental_backgroundImage: `linear-gradient(180deg, #3C9FFE, #0274DF)`,
+    backgroundColor: '#0274DF',
     width: 128,
     height: 128,
     position: 'absolute',

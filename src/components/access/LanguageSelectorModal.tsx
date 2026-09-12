@@ -288,9 +288,14 @@ function useStyles() {
     backgroundColor: AccessColors.cardHover,
   },
   optionRowFocused: {
-    outlineWidth: 3,
-    outlineColor: AccessColors.focusRing,
-    outlineStyle: 'solid',
+    ...Platform.select({
+      web: {
+        outlineWidth: 3,
+        outlineColor: AccessColors.focusRing,
+        outlineStyle: 'solid',
+      },
+      default: {},
+    }),
   } as any,
 
   optionText: {

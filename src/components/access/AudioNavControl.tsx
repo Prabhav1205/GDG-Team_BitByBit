@@ -7,11 +7,13 @@
  */
 
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { useAudioNav } from '@/context/AudioNavContext';
 import { KioskIcon } from './KioskIcon';
 import { AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow } from '@/constants/access-theme';
 import { useAccessTheme } from '@/context/AccessThemeContext';
+
+import { router } from 'expo-router';
 
 export function AudioNavControl({ isNarrow, insets }: { isNarrow?: boolean, insets?: any }) {
   const styles = useStyles();
@@ -27,38 +29,34 @@ export function AudioNavControl({ isNarrow, insets }: { isNarrow?: boolean, inse
   } = useAudioNav();
 
   if (isNarrow) {
-    // Mobile Floating Action Button (FAB)
+    // Mobile inline header control — clean, aligned, and accessible without absolute clipping
     return (
-      <View style={styles.fabContainer}>
+      <View style={styles.narrowContainer}>
         {Boolean(ariaLiveMessage) && (
           <View aria-live={ariaLiveAssertive ? 'assertive' : 'polite'} aria-atomic="true" role="status" style={styles.srOnly}>
             <Text>{ariaLiveMessage}</Text>
           </View>
         )}
-        
-        {isListening && Boolean(lastTranscript) && (
-          <View style={[styles.transcriptBadge, styles.transcriptBadgeFab]}>
-            <Text style={styles.transcriptText} numberOfLines={2}>
-              {`"${lastTranscript}"`}
-            </Text>
-          </View>
-        )}
 
         <Pressable
-          onPress={isListening ? stopCommandListening : startCommandListening}
+          onPress={toggleAudioNav}
           style={({ pressed, focused }: any) => [
-            styles.fab,
-            isListening && styles.fabListening,
+            styles.narrowToggleBtn,
+            isAudioNavEnabled && styles.narrowToggleBtnActive,
             pressed && styles.pressed,
             focused && styles.focused,
-            { bottom: Math.max(80, (insets?.bottom || 0) + 70), right: Math.max(24, (insets?.right || 0) + 16) }
           ]}
           accessibilityRole="button"
-          accessibilityLabel={isListening ? 'Voice listening active. Press to stop continuous voice commands.' : 'Press to speak voice commands like Sign, Voice, Text, or Help.'}
-          testID="voice-command-toggle"
+          accessibilityLabel={`Audio Navigation: ${isAudioNavEnabled ? 'On' : 'Off'}. Press to toggle speech guidance.`}
+          accessibilityState={{ checked: isAudioNavEnabled }}
+          testID="audio-nav-toggle-mobile"
         >
-          <View style={[styles.micDot, isListening && styles.micDotListening, { position: 'absolute', top: 12, right: 12 }]} />
-          <KioskIcon name="voice" size={24} color={isListening ? '#E53935' : '#FFFFFF'} />
+          <KioskIcon
+            name="voice"
+            size={18}
+            color={isAudioNavEnabled ? AccessColors.navy : AccessColors.textOnDarkMuted}
+          />
+          <View style={[styles.narrowStatusDot, { backgroundColor: isAudioNavEnabled ? '#10B981' : 'transparent' }]} />
         </Pressable>
       </View>
     );
@@ -235,42 +233,41 @@ function useStyles() {
       opacity: 0.75,
     },
     focused: {
-      outlineWidth: 2,
-      outlineColor: AccessColors.focusRing,
-      outlineStyle: 'solid',
+      ...Platform.select({
+        web: {
+          outlineWidth: 2,
+          outlineColor: AccessColors.focusRing,
+          outlineStyle: 'solid',
+        },
+        default: {},
+      }),
     } as any,
-    fabContainer: {
-      position: 'absolute',
-      bottom: 0,
-      right: 0,
-      zIndex: 9999,
+    narrowContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
     },
-    fab: {
-      position: 'absolute',
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: AccessColors.navy,
+    narrowToggleBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      borderWidth: 1,
+      borderColor: AccessColors.headerBorder,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: '#1B2D4F',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
+      position: 'relative',
     },
-    fabListening: {
-      backgroundColor: '#FFEBEE',
-      shadowColor: '#E53935',
+    narrowToggleBtnActive: {
+      backgroundColor: AccessColors.tealBorder,
+      borderColor: AccessColors.teal,
     },
-    transcriptBadgeFab: {
+    narrowStatusDot: {
       position: 'absolute',
-      bottom: 150,
-      right: 24,
-      maxWidth: 250,
-      backgroundColor: 'rgba(0,0,0,0.7)',
-      padding: AccessSpacing.md,
-      borderRadius: AccessRadius.md,
+      top: 6,
+      right: 6,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
     },
   }), [AccessColors, AccessSpacing, AccessFontSize, AccessFontFamily, AccessFontWeight, AccessRadius, AccessShadow]);
 }

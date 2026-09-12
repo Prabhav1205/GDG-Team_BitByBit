@@ -218,13 +218,13 @@ function useStyles() {
     paddingHorizontal: AccessSpacing.xl,
     borderRadius: AccessRadius.md,
     borderWidth: 1.5,
-    borderColor: '#DC2626',
+    borderColor: AccessColors.alertErrorDot,
     ...Platform.select({ web: { outlineStyle: 'none' }, default: {} }),
   },
   endBtnLabel: {
     fontSize: AccessFontSize.md,
     fontWeight: AccessFontWeight.semibold,
-    color: '#DC2626',
+    color: AccessColors.alertErrorText,
   },
   btnPressed: { opacity: 0.75 },
 

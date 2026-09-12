@@ -32,6 +32,7 @@ import { useAccessTheme } from '@/context/AccessThemeContext';
 import { UI_STRINGS } from '@/constants/i18n';
 import { useSession } from '@/context/SessionContext';
 import { AudioNavControl } from './AudioNavControl';
+import { ConnectivityStatus } from './ConnectivityStatus';
 import { KioskIcon } from './KioskIcon';
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -43,35 +44,7 @@ export function AccessHeader() {
   const isNarrow = width < 600;
   const insets = useSafeAreaInsets();
 
-  const [pulseAnim] = useState(() => new Animated.Value(1));
-  const [pulseOpacity] = useState(() => new Animated.Value(0.7));
   const [settingsHovered, setSettingsHovered] = useState(false);
-
-  // Pulsing status dot animation
-  useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(pulseAnim, {
-            toValue: 1.5,
-            duration: AccessAnimation.pulse / 2,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseOpacity, {
-            toValue: 0,
-            duration: AccessAnimation.pulse / 2,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.timing(pulseAnim, { toValue: 1, duration: 0, useNativeDriver: true }),
-          Animated.timing(pulseOpacity, { toValue: 0.7, duration: 0, useNativeDriver: true }),
-        ]),
-      ])
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, [pulseAnim, pulseOpacity]);
 
   return (
     <LinearGradient
@@ -119,38 +92,11 @@ export function AccessHeader() {
 
         {/* ── RIGHT: Controls ─────────────────────────────────────── */}
         <View style={styles.right}>
-          {/* AudioNavControl renders differently on mobile (FAB) vs desktop (inline) */}
-          {!isNarrow && <AudioNavControl isNarrow={false} insets={insets} />}
+          {/* AudioNavControl renders on both mobile (floating FAB) and desktop (inline) */}
+          <AudioNavControl isNarrow={isNarrow} insets={insets} />
 
-          {/* Status dot — compact on mobile, pill on wide */}
-          {isNarrow ? (
-            <View style={styles.statusDotWrapper}>
-              <Animated.View
-                style={[
-                  styles.statusRing,
-                  { transform: [{ scale: pulseAnim }], opacity: pulseOpacity },
-                ]}
-              />
-              <View style={styles.statusDot} />
-            </View>
-          ) : (
-            <View
-              style={styles.statusPill}
-              accessibilityLabel="Service status: available"
-              accessibilityRole="text"
-            >
-              <View style={styles.statusDotWrapper}>
-                <Animated.View
-                  style={[
-                    styles.statusRing,
-                    { transform: [{ scale: pulseAnim }], opacity: pulseOpacity },
-                  ]}
-                />
-                <View style={styles.statusDot} />
-              </View>
-              <Text style={styles.statusLabel}>{ui.available}</Text>
-            </View>
-          )}
+          {/* Connectivity Status (Online/Offline indicator) */}
+          <ConnectivityStatus isNarrow={isNarrow} />
 
           {/* Settings button */}
           <Pressable

@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, router } from 'expo-router';
 
 import { AccessHeader } from '@/components/access/AccessHeader';
 import { ModeSelector } from '@/components/access/ModeSelector';
@@ -309,6 +309,48 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {/* ── 3. One-Tap Auto Voice Assistant Mic (Main Screen) ─────── */}
+          <View
+            style={styles.section}
+            accessibilityLabel="Voice Assistant"
+          >
+            <Pressable
+              onPress={() => router.push('/voice')}
+              style={({ pressed }) => [styles.voiceHeroBtn, pressed && styles.voiceHeroBtnPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={session.language === 'hi' ? 'वॉइस असिस्टेंट शुरू करने के लिए एक बार टैप करें (हाथ मुक्त)' : session.language === 'mr' ? 'व्हॉइस असिस्टंट सुरू करण्यासाठी एकदा टॅप करा (हात मुक्त)' : 'Tap once to start auto voice assistant. Entire session is hands-free.'}
+              testID="main-screen-voice-mic"
+            >
+              <LinearGradient
+                colors={['#0B8A7E', '#1B2D4F']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.voiceHeroGradient}
+              >
+                <View style={styles.voiceHeroOrb}>
+                  <KioskIcon name="voice" size={32} color="#FFFFFF" />
+                </View>
+                <View style={styles.voiceHeroTextCol}>
+                  <View style={styles.voiceHeroBadgeRow}>
+                    <View style={styles.voiceHeroDot} />
+                    <Text style={styles.voiceHeroBadgeText}>
+                      {session.language === 'hi' ? 'एक बार टैप करें • ऑटो वॉइस लूप' : session.language === 'mr' ? 'एकदा टॅप करा • ऑटो व्हॉइस लूप' : 'ONE TAP • 100% HANDS-FREE VOICE'}
+                    </Text>
+                  </View>
+                  <Text style={styles.voiceHeroTitle}>
+                    {session.language === 'hi' ? 'बोलकर सहायता प्राप्त करें' : session.language === 'mr' ? 'बोलून मदत मिळवा' : 'Start Spoken Voice Assistant'}
+                  </Text>
+                  <Text style={styles.voiceHeroSubtitle}>
+                    {session.language === 'hi' ? 'एक टैप से शुरू करें — बाकी पूरा सत्र बिना किसी अतिरिक्त टैप के चलेगा।' : session.language === 'mr' ? 'एका टॅपने सुरू करा — संपूर्ण सत्र विना अतिरिक्त टॅप चालेल.' : 'Tap once to begin. Auto-loops listen → respond → listen for the rest of your session.'}
+                  </Text>
+                </View>
+                <View style={styles.voiceHeroArrow}>
+                  <KioskIcon name="next" size={22} color="#FFFFFF" />
+                </View>
+              </LinearGradient>
+            </Pressable>
+          </View>
+
           {/* ── Mode selector ──────────────────────────────────────────── */}
           <View
             style={styles.section}
@@ -342,9 +384,6 @@ export default function HomeScreen() {
 
         {/* ── 5. Assistance Footer ────────────────────────────────────── */}
         <AssistanceBar />
-
-        {/* ── 6. Mobile Voice Commands FAB ────────────────────────────── */}
-        {isNarrow && <AudioNavControl isNarrow={true} insets={insets} />}
       </LinearGradient>
     </SafeAreaView>
   );
@@ -587,6 +626,69 @@ function useStyles() {
   // ── Mode selector wrapper ───────────────────────────────────────────────
   selectorWrapper: {
     width: '100%',
+  },
+
+  // ── One-Tap Voice Hero Mic Button ─────────────────────────────────────────
+  voiceHeroBtn: {
+    width: '100%',
+    borderRadius: AccessRadius.xl,
+    overflow: 'hidden',
+    ...AccessShadow.md,
+  },
+  voiceHeroBtnPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.99 }],
+  },
+  voiceHeroGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: AccessSpacing.lg,
+    gap: AccessSpacing.md,
+  },
+  voiceHeroOrb: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voiceHeroTextCol: {
+    flex: 1,
+    gap: 4,
+  },
+  voiceHeroBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  voiceHeroDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#00F5D4',
+  },
+  voiceHeroBadgeText: {
+    fontSize: AccessFontSize.xs,
+    fontFamily: AccessFontFamily.bold,
+    color: '#00F5D4',
+    letterSpacing: 0.5,
+  },
+  voiceHeroTitle: {
+    fontSize: AccessFontSize.lg,
+    fontFamily: AccessFontFamily.bold,
+    color: '#FFFFFF',
+  },
+  voiceHeroSubtitle: {
+    fontSize: AccessFontSize.xs,
+    fontFamily: AccessFontFamily.regular,
+    color: 'rgba(255, 255, 255, 0.85)',
+    lineHeight: 18,
+  },
+  voiceHeroArrow: {
+    padding: AccessSpacing.xs,
   },
 
   // ── Accessibility statement ──────────────────────────────────────────────

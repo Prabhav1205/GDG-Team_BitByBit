@@ -1,10 +1,23 @@
-import { AccessColors, AccessSpacing, AccessShadow, AccessAnimation } from '@/constants/access-theme';
+import {
+  AccessColors,
+  AccessCategoryColors,
+  AccessSpacing,
+  AccessRadius,
+  AccessFontSize,
+  AccessFontFamily,
+  AccessFontWeight,
+  AccessShadow,
+} from '@/constants/access-theme';
 import { useAccessTheme } from '@/context/AccessThemeContext';
+import { useSchemeSearch } from '@/hooks/use-scheme-search';
+import { SchemeResultsPanel } from '@/components/access/SchemeResultsPanel';
+
 /**
- * /eligibility — Eligibility & Benefit Matcher Screen
+ * /eligibility — Unified Government Support & Benefit Schemes Hub
  *
- * Rule-based matching engine for government & institutional disability benefit schemes,
- * integrated with Supabase DB (with local JSON fallback) and TTS announcements.
+ * Combines:
+ *   1. RAG Instant Semantic Search (FAISS + MiniLM vector search) & Category Browsing
+ *   2. Rule-Based Eligibility Evaluation Wizard with TTS voice announcements
  */
 
 import React, { useState, useEffect } from 'react';
@@ -17,6 +30,7 @@ import {
   ScrollView,
   Linking,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,7 +49,19 @@ import {
 } from '@/services/eligibility-engine';
 import { useSession } from '@/context/SessionContext';
 import { useAudioNav } from '@/context/AudioNavContext';
+import { speechEngine } from '@/services/speech-engine';
+import { LANGUAGES, toSafeLangCode } from '@/constants/i18n';
 
+const SCHEME_CATEGORIES = [
+  { emoji: '🎓', label: 'Education / Scholarship', query: 'education scholarship student financial help school college', color: AccessCategoryColors['Education and Scholarship'].text, bg: AccessCategoryColors['Education and Scholarship'].bg },
+  { emoji: '🏥', label: 'Healthcare', query: 'healthcare hospital medical treatment family health coverage', color: AccessCategoryColors['Healthcare'].text, bg: AccessCategoryColors['Healthcare'].bg },
+  { emoji: '♿', label: 'Disability Support', query: 'disability support assistive devices rehabilitation', color: AccessCategoryColors['Disability Support'].text, bg: AccessCategoryColors['Disability Support'].bg },
+  { emoji: '💰', label: 'Financial Help', query: 'financial assistance money income support poor BPL', color: AccessCategoryColors['Financial Assistance'].text, bg: AccessCategoryColors['Financial Assistance'].bg },
+  { emoji: '🏠', label: 'Housing', query: 'housing home pucca house construction shelter', color: AccessCategoryColors['Housing'].text, bg: AccessCategoryColors['Housing'].bg },
+  { emoji: '👩‍👧', label: 'Women & Child', query: 'women child girl welfare protection development scheme', color: AccessCategoryColors['Women and Child'].text, bg: AccessCategoryColors['Women and Child'].bg },
+  { emoji: '👴', label: 'Senior Citizens', query: 'old age senior citizen pension retirement 60 years', color: AccessCategoryColors['Senior Citizens'].text, bg: AccessCategoryColors['Senior Citizens'].bg },
+  { emoji: '💼', label: 'Employment / Skills', query: 'employment skill training job certificate youth unemployed', color: AccessCategoryColors['Employment and Skills'].text, bg: AccessCategoryColors['Employment and Skills'].bg },
+];
 
 const DISABILITY_OPTIONS = [
   { id: 'any', label: 'All / Any' },
@@ -53,17 +79,28 @@ const INCOME_BRACKETS = [
 
 export default function EligibilityPage() {
   const styles = useStyles();
-  const { clearSession, broadcastEligibilityMatch } = useSession();
+  const { session, clearSession, broadcastEligibilityMatch } = useSession();
   const { announce } = useAudioNav();
+
+  const lang = toSafeLangCode(session.language);
+  const speechCode = LANGUAGES[lang]?.speechCode || 'en-IN';
 
   const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Instant RAG Search & Categories State
+  const [searchQuery, setSearchQuery] = useState('');
+  const schemeSearch = useSchemeSearch();
 
   // Form State
   const [age, setAge] = useState<number>(24);
   const [disabilityType, setDisabilityType] = useState<CandidateProfile['disabilityType']>('any');
   const [income, setIncome] = useState<number>(250000);
   const [expandedSchemeId, setExpandedSchemeId] = useState<string | null>(null);
+
+  // Audio / Speech State
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingSchemeId, setSpeakingSchemeId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -74,6 +111,10 @@ export default function EligibilityPage() {
     }
     loadData();
     announce('Eligibility and Benefit Matcher loaded. Enter your profile details to match government schemes.');
+
+    return () => {
+      speechEngine.stopSpeaking();
+    };
   }, [announce]);
 
   const candidateProfile: CandidateProfile = {
@@ -91,16 +132,48 @@ export default function EligibilityPage() {
   const eligibleCount = matchedResults.filter((r) => r.isEligible).length;
 
   function handleBack() {
+    speechEngine.stopSpeaking();
     announce('Returning to main menu');
     clearSession();
     router.replace('/');
   }
 
   function handleAnnounceResults() {
-    announce(
-      `Profile evaluated. Found ${eligibleCount} fully eligible benefit schemes out of ${matchedResults.length} total schemes.`
-    );
+    if (isSpeaking && !speakingSchemeId) {
+      speechEngine.stopSpeaking();
+      setIsSpeaking(false);
+      announce('Voice announcement stopped.');
+      return;
+    }
 
+    const eligibleSchemes = matchedResults.filter((r) => r.isEligible);
+    const count = eligibleSchemes.length;
+    const total = matchedResults.length;
+
+    let speechText = '';
+    if (count === 0) {
+      speechText =
+        lang === 'hi'
+          ? `प्रोफ़ाइल का मूल्यांकन किया गया। आपकी वर्तमान प्रोफ़ाइल के लिए कोई पूर्णतः पात्र योजना नहीं मिली। कृपया आय या आयु मानदंड समायोजित करें।`
+          : lang === 'mr'
+          ? `प्रोफाइलचे मूल्यांकन केले. आपल्या सध्याच्या प्रोफाइलसाठी कोणतीही पूर्ण पात्र योजना आढळली नाही.`
+          : `Profile evaluated. Found no fully eligible benefit schemes for your current criteria out of ${total} total schemes. You can adjust your age or income settings to explore more.`;
+    } else {
+      const topTitles = eligibleSchemes.slice(0, 3).map((s) => s.scheme.title).join(', ');
+      const moreSuffix = count > 3 ? (lang === 'hi' ? ` और ${count - 3} अन्य योजनाएं` : lang === 'mr' ? ` आणि ${count - 3} इतर योजना` : ` and ${count - 3} more`) : '';
+      speechText =
+        lang === 'hi'
+          ? `प्रोफ़ाइल का मूल्यांकन पूरा हुआ। कुल ${total} में से ${count} सरकारी योजनाएं आपके लिए पूर्णतः पात्र हैं। प्रमुख योजनाएं हैं: ${topTitles}${moreSuffix}।`
+          : lang === 'mr'
+          ? `प्रोफाइलचे मूल्यांकन पूर्ण झाले. एकूण ${total} पैकी ${count} योजना आपल्यासाठी पात्र आहेत. प्रमुख योजना: ${topTitles}${moreSuffix}.`
+          : `Profile evaluated. Found ${count} fully eligible benefit schemes out of ${total} total schemes. Top matching schemes include: ${topTitles}${moreSuffix}.`;
+    }
+
+    announce(speechText);
+    setIsSpeaking(true);
+    setSpeakingSchemeId(null);
+
+    // Broadcast to staff dashboard
     matchedResults.forEach((res) => {
       if (res.isEligible) {
         broadcastEligibilityMatch(
@@ -110,6 +183,40 @@ export default function EligibilityPage() {
           'Verify citizen ID & provide counter registration form'
         );
       }
+    });
+
+    speechEngine.speak(speechText, {
+      lang: speechCode,
+      rate: 0.95,
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    });
+  }
+
+  function handleSpeakSingleScheme(schemeTitle: string, category: string, summary: string, schemeId: string) {
+    if (isSpeaking && speakingSchemeId === schemeId) {
+      speechEngine.stopSpeaking();
+      setIsSpeaking(false);
+      setSpeakingSchemeId(null);
+      return;
+    }
+
+    const readText = `${schemeTitle}. Category: ${category}. Benefit summary: ${summary}.`;
+    announce(`Reading scheme: ${schemeTitle}`);
+    setIsSpeaking(true);
+    setSpeakingSchemeId(schemeId);
+
+    speechEngine.speak(readText, {
+      lang: speechCode,
+      rate: 0.95,
+      onEnd: () => {
+        setIsSpeaking(false);
+        setSpeakingSchemeId(null);
+      },
+      onError: () => {
+        setIsSpeaking(false);
+        setSpeakingSchemeId(null);
+      },
     });
   }
 
@@ -167,9 +274,95 @@ export default function EligibilityPage() {
             </View>
           </View>
 
-          {/* Form Wizard Filter Card */}
+          {/* ── 1. Instant Natural-Language Search (RAG + FAISS) ────────────── */}
+          <View style={styles.searchCard}>
+            <Text style={styles.cardHeading}>1. Search Government Schemes</Text>
+            <Text style={styles.searchSubText}>
+              Type your need in plain language (e.g., "scholarship for college", "wheelchair subsidy", "medical insurance")
+            </Text>
+
+            <View style={styles.searchBarRow}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search schemes (e.g. disability grant, pension, education)..."
+                placeholderTextColor={AccessColors.textTertiary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={() => {
+                  if (searchQuery.trim()) {
+                    announce(`Searching for ${searchQuery}`);
+                    schemeSearch.search(searchQuery.trim(), { age, annual_income: income });
+                  }
+                }}
+                accessibilityLabel="Search government benefit schemes"
+                testID="eligibility-search-input"
+              />
+              <Pressable
+                onPress={() => {
+                  if (searchQuery.trim()) {
+                    announce(`Searching for ${searchQuery}`);
+                    schemeSearch.search(searchQuery.trim(), { age, annual_income: income });
+                  }
+                }}
+                style={({ pressed }) => [
+                  styles.searchSubmitBtn,
+                  pressed && { opacity: 0.85 },
+                  schemeSearch.loading && { opacity: 0.6 },
+                ]}
+                disabled={schemeSearch.loading}
+                accessibilityRole="button"
+                accessibilityLabel="Submit search"
+              >
+                <Text style={styles.searchSubmitBtnText}>
+                  {schemeSearch.loading ? 'Searching…' : '🔍 Search'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Category Quick Pills */}
+            <Text style={styles.categoriesLabel}>Or browse by category:</Text>
+            <View style={styles.categoryGrid}>
+              {SCHEME_CATEGORIES.map((cat) => (
+                <Pressable
+                  key={cat.label}
+                  style={({ pressed }) => [
+                    styles.categoryPill,
+                    { backgroundColor: cat.bg, borderColor: cat.color + '40' },
+                    pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] },
+                    schemeSearch.loading && { opacity: 0.5 },
+                  ]}
+                  onPress={() => {
+                    setSearchQuery(cat.label);
+                    announce(`Browsing ${cat.label} schemes`);
+                    schemeSearch.search(cat.query, { age, annual_income: income });
+                  }}
+                  disabled={schemeSearch.loading}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Browse ${cat.label} schemes`}
+                >
+                  <Text style={styles.categoryPillEmoji}>{cat.emoji}</Text>
+                  <Text style={[styles.categoryPillText, { color: cat.color }]}>
+                    {cat.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* RAG Search Results */}
+            {(schemeSearch.loading || schemeSearch.results.length > 0 || schemeSearch.error) && (
+              <View style={styles.ragResultsContainer}>
+                <SchemeResultsPanel
+                  results={schemeSearch.results}
+                  loading={schemeSearch.loading}
+                  error={schemeSearch.error}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* ── 2. Candidate Profile Criteria Wizard ───────────────────────── */}
           <View style={styles.filterCard}>
-            <Text style={styles.cardHeading}>1. Candidate Profile Criteria</Text>
+            <Text style={styles.cardHeading}>2. Candidate Profile Calculator</Text>
 
             <View style={styles.filterGrid}>
               {/* Age Input */}
@@ -262,13 +455,19 @@ export default function EligibilityPage() {
             {/* Recalculate & Announce Button */}
             <Pressable
               onPress={handleAnnounceResults}
-              style={styles.evaluateBtn}
+              style={[
+                styles.evaluateBtn,
+                isSpeaking && !speakingSchemeId && styles.evaluateBtnSpeaking,
+              ]}
               accessibilityRole="button"
-              accessibilityLabel="Announce matched schemes via voice"
+              accessibilityLabel={isSpeaking && !speakingSchemeId ? "Stop speaking matched results" : "Hear matched schemes via voice"}
+              testID="hear-matched-results-btn"
             >
-              <KioskIcon name="voice" size={18} color={AccessColors.cardDefault} />
+              <KioskIcon name="voice" size={20} color={AccessColors.cardDefault} />
               <Text style={styles.evaluateBtnText}>
-                Hear Matched Results Summary ({eligibleCount} Eligible)
+                {isSpeaking && !speakingSchemeId
+                  ? `⏹ Stop Speaking (${eligibleCount} Eligible)`
+                  : `🔊 Hear Matched Results Summary (${eligibleCount} Eligible)`}
               </Text>
             </Pressable>
           </View>
@@ -293,6 +492,7 @@ export default function EligibilityPage() {
               <View style={styles.schemesList}>
                 {matchedResults.map(({ scheme, matchScore, isEligible, matchReasons, unmetCriteria }) => {
                   const isExpanded = expandedSchemeId === scheme.id;
+                  const isThisSchemeSpeaking = isSpeaking && speakingSchemeId === scheme.id;
                   return (
                     <View
                       key={scheme.id}
@@ -301,19 +501,35 @@ export default function EligibilityPage() {
                         isEligible && styles.schemeCardEligible,
                       ]}
                     >
-                      {/* Card Top Row: Badge + Category */}
+                      {/* Card Top Row: Badge + Category + Read Aloud Btn */}
                       <View style={styles.schemeCardHeader}>
-                        <View
-                          style={[
-                            styles.badgePill,
-                            isEligible ? styles.badgeEligible : styles.badgePartial,
-                          ]}
-                        >
-                          <Text style={styles.badgeText}>
-                            {isEligible ? '100% Eligible' : `${matchScore}% Match`}
-                          </Text>
+                        <View style={styles.schemeHeaderLeft}>
+                          <View
+                            style={[
+                              styles.badgePill,
+                              isEligible ? styles.badgeEligible : styles.badgePartial,
+                            ]}
+                          >
+                            <Text style={styles.badgeText}>
+                              {isEligible ? '100% Eligible' : `${matchScore}% Match`}
+                            </Text>
+                          </View>
+                          <Text style={styles.schemeCategory}>{scheme.category}</Text>
                         </View>
-                        <Text style={styles.schemeCategory}>{scheme.category}</Text>
+
+                        <Pressable
+                          onPress={() => handleSpeakSingleScheme(scheme.title, scheme.category, scheme.benefitSummary || '', scheme.id)}
+                          style={[
+                            styles.readSchemeBtn,
+                            isThisSchemeSpeaking && styles.readSchemeBtnActive,
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Read ${scheme.title} aloud`}
+                        >
+                          <Text style={[styles.readSchemeBtnText, isThisSchemeSpeaking && styles.readSchemeBtnTextActive]}>
+                            {isThisSchemeSpeaking ? '⏹ Stop' : '🔊 Listen'}
+                          </Text>
+                        </Pressable>
                       </View>
 
                       {/* Title & Summary */}
@@ -436,10 +652,15 @@ function useStyles() {
     backgroundColor: AccessColors.cardHover,
   },
   backBtnFocused: {
-    outlineWidth: 3,
-    outlineColor: AccessColors.focusRing,
-    outlineStyle: 'solid',
-    outlineOffset: 2,
+    ...Platform.select({
+      web: {
+        outlineWidth: 3,
+        outlineColor: AccessColors.focusRing,
+        outlineStyle: 'solid',
+        outlineOffset: 2,
+      },
+      default: {},
+    }),
   } as any,
   backBtnLabel: {
     fontSize: AccessFontSize.sm,
@@ -509,6 +730,80 @@ function useStyles() {
     fontSize: AccessFontSize.xs,
     color: AccessColors.textSecondary,
     fontWeight: AccessFontWeight.medium,
+  },
+  searchCard: {
+    backgroundColor: AccessColors.cardDefault,
+    borderRadius: AccessRadius.md,
+    borderWidth: 1.5,
+    borderColor: AccessColors.border,
+    padding: AccessSpacing.xl,
+    gap: AccessSpacing.md,
+  },
+  searchSubText: {
+    fontSize: AccessFontSize.sm,
+    color: AccessColors.textSecondary,
+    lineHeight: 20,
+  },
+  searchBarRow: {
+    flexDirection: 'row',
+    gap: AccessSpacing.sm,
+    alignItems: 'center',
+  },
+  searchInput: {
+    flex: 1,
+    height: 48,
+    backgroundColor: AccessColors.background,
+    borderWidth: 1.5,
+    borderColor: AccessColors.borderLight,
+    borderRadius: AccessRadius.sm,
+    paddingHorizontal: AccessSpacing.md,
+    fontSize: AccessFontSize.base,
+    color: AccessColors.textPrimary,
+  },
+  searchSubmitBtn: {
+    height: 48,
+    paddingHorizontal: AccessSpacing.lg,
+    backgroundColor: AccessColors.teal,
+    borderRadius: AccessRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchSubmitBtnText: {
+    fontSize: AccessFontSize.sm,
+    fontWeight: AccessFontWeight.bold,
+    color: AccessColors.cardDefault,
+  },
+  categoriesLabel: {
+    fontSize: AccessFontSize.xs,
+    fontWeight: AccessFontWeight.bold,
+    color: AccessColors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: AccessSpacing.xs,
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: AccessSpacing.sm,
+  },
+  categoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: AccessSpacing.xs,
+    paddingVertical: AccessSpacing.xs + 2,
+    paddingHorizontal: AccessSpacing.md,
+    borderRadius: AccessRadius.full ?? 20,
+    borderWidth: 1,
+  },
+  categoryPillEmoji: {
+    fontSize: 16,
+  },
+  categoryPillText: {
+    fontSize: AccessFontSize.xs,
+    fontWeight: AccessFontWeight.semibold,
+  },
+  ragResultsContainer: {
+    marginTop: AccessSpacing.sm,
   },
   filterCard: {
     backgroundColor: AccessColors.cardDefault,
@@ -607,10 +902,42 @@ function useStyles() {
     borderRadius: AccessRadius.sm,
     marginTop: AccessSpacing.sm,
   },
+  evaluateBtnSpeaking: {
+    backgroundColor: '#DC2626',
+  },
   evaluateBtnText: {
     fontSize: AccessFontSize.base,
     fontWeight: AccessFontWeight.bold,
     color: AccessColors.cardDefault,
+  },
+  schemeHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: AccessSpacing.sm,
+    flexWrap: 'wrap',
+  },
+  readSchemeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: AccessSpacing.sm + 2,
+    paddingVertical: 4,
+    borderRadius: AccessRadius.sm,
+    backgroundColor: AccessColors.cardHover,
+    borderWidth: 1,
+    borderColor: AccessColors.borderLight,
+  },
+  readSchemeBtnActive: {
+    backgroundColor: AccessColors.alertErrorBg,
+    borderColor: AccessColors.alertErrorBorder,
+  },
+  readSchemeBtnText: {
+    fontSize: AccessFontSize.xs,
+    fontWeight: AccessFontWeight.bold,
+    color: AccessColors.navy,
+  },
+  readSchemeBtnTextActive: {
+    color: AccessColors.alertErrorText,
   },
   resultsSection: {
     gap: AccessSpacing.md,
@@ -649,7 +976,7 @@ function useStyles() {
   },
   schemeCardEligible: {
     borderColor: AccessColors.statusGreen,
-    backgroundColor: '#F6FBF7',
+    backgroundColor: AccessColors.statusGreenBg,
   },
   schemeCardHeader: {
     flexDirection: 'row',
@@ -665,7 +992,7 @@ function useStyles() {
     backgroundColor: AccessColors.statusGreenBg,
   },
   badgePartial: {
-    backgroundColor: '#FFF8E1',
+    backgroundColor: AccessColors.alertWarningBg,
   },
   badgeText: {
     fontSize: AccessFontSize.xs,
@@ -705,7 +1032,7 @@ function useStyles() {
   },
   reasonFailText: {
     fontSize: AccessFontSize.xs,
-    color: '#D32F2F',
+    color: AccessColors.alertErrorText,
     fontWeight: AccessFontWeight.medium,
   },
   expandBtn: {

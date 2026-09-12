@@ -12,6 +12,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useAccessTheme } from '@/context/AccessThemeContext';
+import { AccessColors } from '@/constants/access-theme';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -33,11 +34,11 @@ const VARIANT_COLORS: Record<
   StatusVariant,
   { bg: string; text: string; dot: string }
 > = {
-  available: { bg: '#E6F4EB', text: '#1A6B34', dot: '#2D7D46' },
-  eligible:  { bg: '#EFF6FF', text: '#1D4ED8', dot: '#2563EB' },
-  active:    { bg: '#E6F4EB', text: '#065F46', dot: '#059669' },
-  pending:   { bg: '#FFFBEB', text: '#92400E', dot: '#D97706' },
-  inactive:  { bg: '#F3F4F6', text: '#6B7280', dot: '#9CA3AF' },
+  available: { bg: AccessColors.alertSuccessBg, text: AccessColors.alertSuccessText, dot: AccessColors.alertSuccessDot },
+  eligible:  { bg: AccessColors.alertInfoBg, text: AccessColors.alertInfoText, dot: AccessColors.alertInfoDot },
+  active:    { bg: AccessColors.alertSuccessBg, text: AccessColors.alertSuccessText, dot: AccessColors.statusGreen },
+  pending:   { bg: AccessColors.alertWarningBg, text: AccessColors.alertWarningText, dot: AccessColors.alertWarningDot },
+  inactive:  { bg: AccessColors.cardHover, text: AccessColors.textTertiary, dot: AccessColors.border },
 };
 
 // ── Component ─────────────────────────────────────────────────────────────

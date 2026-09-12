@@ -88,6 +88,8 @@ interface SessionContextValue {
   updateAccessibility: (key: keyof AccessibilitySettings, value?: boolean) => void;
   /** Broadcast citizen input live to staff dashboard */
   broadcastTranslation: (text: string, modeLabel: string, confidence?: number) => void;
+  /** Request urgent in-person staff assistance from citizen kiosk to staff dashboard */
+  requestStaffAssistance: (reason?: string, sourceMode?: string) => void;
   /** Broadcast matched eligibility benefit results live to staff dashboard */
   broadcastEligibilityMatch: (schemeName: string, category: string, benefitText: string, actionRequired: string) => void;
   /** Send staff reply back to kiosk */
@@ -308,6 +310,56 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const requestStaffAssistance = (reason?: string, sourceMode?: string) => {
+    const now = getTimeStr();
+    const alertText = reason || 'Citizen requested immediate in-person staff assistance at Kiosk';
+    const mode = sourceMode || 'Staff Alert';
+
+    const newItem: StaffTranslationItem = {
+      id: `alert-${Date.now()}`,
+      modeLabel: 'Priority Staff Alert',
+      text: alertText,
+      timestamp: now,
+      confidence: 1.0,
+    };
+    const newLog: StaffLogEntry = {
+      id: `log-${Date.now()}`,
+      timestamp: now,
+      type: 'CITIZEN_INPUT',
+      mode: 'Staff Alert',
+      content: `🚨 URGENT CITIZEN ASSISTANCE REQUEST (${mode}): "${alertText}"`,
+    };
+
+    syncState((prev) => ({
+      ...prev,
+      liveTranslations: [newItem, ...prev.liveTranslations],
+      sessionLogs: [...prev.sessionLogs, newLog],
+    }));
+
+    if (broadcastChan) {
+      try {
+        broadcastChan.postMessage({
+          type: 'STAFF_ALERT',
+          payload: { text: alertText, mode, timestamp: now },
+        });
+      } catch {
+        // ignore
+      }
+    }
+
+    if (supabase) {
+      try {
+        supabase.channel('kiosk_staff_sync_room').send({
+          type: 'broadcast',
+          event: 'STAFF_ALERT',
+          payload: { text: alertText, mode, timestamp: now },
+        });
+      } catch {
+        // ignore
+      }
+    }
+  };
+
   const broadcastEligibilityMatch = (
     schemeName: string,
     category: string,
@@ -405,6 +457,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setLanguage,
         updateAccessibility,
         broadcastTranslation,
+        requestStaffAssistance,
         broadcastEligibilityMatch,
         addStaffReply,
         addSupervisorNote,

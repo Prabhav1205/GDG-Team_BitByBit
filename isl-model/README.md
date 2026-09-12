@@ -61,6 +61,114 @@ A visitor communicating in Indian Sign Language stands before the kiosk camera, 
                    [Browser Native Speech Synthesis (TTS)]
 ```
 
+---
+
+## RAG Government Scheme Matching
+
+The system includes an **offline-first Retrieval-Augmented Generation (RAG)** engine that maps any user query (spoken, typed, or gesture-derived) to relevant Indian government benefit schemes.
+
+### Architecture
+
+```
+[User Input: Text / Voice / ISL Gesture]
+       │
+       ▼
+[SchemeRetriever]
+       │
+       ├──► FAISS IndexFlatIP (cosine similarity, all-MiniLM-L6-v2 embeddings) [if built]
+       │         └──► top-k semantic matches
+       │
+       └──► Keyword Overlap Fallback [if FAISS not yet built]
+                 └──► token intersection scoring
+       │
+       ▼
+[BasicEligibilityChecker]  ──► advisory status: potential_match / likely_ineligible
+       │
+       ▼
+[FastAPI /api/schemes/search]  ──►  React SchemeResultsPanel
+```
+
+### Dataset
+
+`data/schemes.json` contains **30 real Indian government schemes** across 9 categories:
+- 🎓 Education & Scholarship (8 schemes — NSP, PMRF, YASASVI, etc.)
+- 🏥 Healthcare (1 scheme — Ayushman Bharat PM-JAY)
+- ♿ Disability Support (5 schemes — ADIP, NHFDC, UDID, DDRS, overseas scholarship)
+- 💰 Financial Assistance (6 schemes — PMSBY, PMJJBY, APY, Jan Dhan, PDS, IGNDPS)
+- 🏠 Housing (2 schemes — PMAY Gramin, PMAY Urban)
+- 👩‍👧 Women & Child (3 schemes — Sukanya Samriddhi, BBBP, Ujjwala)
+- 👴 Senior Citizens (2 schemes — IGNOAPS, PM Vaya Vandana)
+- 🌾 Agriculture (1 scheme — PM Fasal Bima Yojana)
+- 💼 Employment & Skills (2 schemes — PMKVY, Stand-Up India)
+
+See `data/SOURCES.md` for official URLs and `data/DEMO_QUERIES.md` for rehearsed demo queries.
+
+### Build FAISS Semantic Index (run once while online)
+
+```bash
+cd isl-model
+python scripts/build_scheme_index.py
+# Output: data/scheme_index.faiss + data/scheme_metadata.json
+# Sanity check query printed at end
+```
+
+After building, all queries run **fully offline** at ~10ms per search.
+
+---
+
+## ONNX Edge Deployment
+
+The ISL gesture classifier can be exported to ONNX format for faster, dependency-light inference using `onnxruntime` instead of `scikit-learn`.
+
+### Export ONNX Model
+
+```bash
+cd isl-model
+python scripts/export_onnx.py
+# Output: models/isl_model.onnx
+```
+
+### How It Works
+
+- At startup, `api/main.py` checks for `models/isl_model.onnx`
+- If found: uses `OnnxGesturePredictor` (`src/onnx_predictor.py`) — **onnxruntime inference**
+- If not found: falls back to `GesturePredictor` (`src/predictor.py`) — **scikit-learn inference**
+- `/health` endpoint reports `inference_backend: "onnx" | "sklearn"` and `onnx_model_loaded: bool`
+
+### Benefits
+
+| | sklearn (pkl) | ONNX |
+|---|---|---|
+| Runtime dep | scikit-learn | onnxruntime |
+| Cold start | ~500ms | ~120ms |
+| Inference | ~8ms | ~1ms |
+| Edge deploy | Heavy | Lightweight |
+
+---
+
+## Demo Quick-Start (Hackathon)
+
+```bash
+# Terminal 1: Start backend
+cd isl-model
+pip install -r requirements.txt
+python scripts/build_scheme_index.py   # build FAISS index
+python scripts/export_onnx.py          # export ONNX model (if trained)
+uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Terminal 2: Start frontend
+cd ..
+npm run dev
+```
+
+Then open `http://localhost:8081` (or expo URL). Navigate to:
+- **Text mode** → type "disability support" → scheme results appear
+- **Sign mode** → select HELP gesture → tap "🔍 Find Government Schemes"
+- **Assisted Touch** → tap 🏥 Healthcare category → scheme results appear
+- **Voice mode** → speak or tap a preset → results auto-appear
+
+---
+
 ### Feature Normalization Pipeline (63 Dimensions)
 To ensure the model is invariant to camera distance and hand position:
 1. **Wrist Origin (Translation Invariance):** Landmark 0 (wrist) is subtracted from all 21 points:

@@ -1,0 +1,158 @@
+{
+  "model": "all-MiniLM-L6-v2",
+  "count": 30,
+  "dim": 384,
+  "index_type": "IndexFlatIP",
+  "schemes_summary": [
+    {
+      "id": "pmjay",
+      "name": "Ayushman Bharat - Pradhan Mantri Jan Arogya Yojana",
+      "category": "Healthcare"
+    },
+    {
+      "id": "adip",
+      "name": "ADIP - Assistance for Purchase of Aids and Appliances",
+      "category": "Disability Support"
+    },
+    {
+      "id": "nhfdc",
+      "name": "NHFDC Self-Employment and Skill Development Loan",
+      "category": "Employment and Skills"
+    },
+    {
+      "id": "igndps",
+      "name": "Indira Gandhi National Disability Pension Scheme",
+      "category": "Financial Assistance"
+    },
+    {
+      "id": "nsp-pre-matric",
+      "name": "National Scholarship Portal - Pre-Matric Scholarship (SC/ST/OBC/Minorities)",
+      "category": "Education and Scholarship"
+    },
+    {
+      "id": "nsp-post-matric",
+      "name": "National Scholarship Portal - Post-Matric Scholarship (SC/ST/OBC/Minorities)",
+      "category": "Education and Scholarship"
+    },
+    {
+      "id": "pm-yasasvi",
+      "name": "PM YASASVI Scholarship for OBC, EBC and DNT Students",
+      "category": "Education and Scholarship"
+    },
+    {
+      "id": "pm-scholarship-rpf",
+      "name": "Prime Minister Scholarship Scheme for Central Armed Police Forces",
+      "category": "Education and Scholarship"
+    },
+    {
+      "id": "begum-hazrat-mahal",
+      "name": "Begum Hazrat Mahal National Scholarship for Minorities",
+      "category": "Education and Scholarship"
+    },
+    {
+      "id": "pmrf",
+      "name": "Prime Minister Research Fellowship (PMRF)",
+      "category": "Education and Scholarship"
+    },
+    {
+      "id": "pmay-gramin",
+      "name": "Pradhan Mantri Awas Yojana - Gramin (Rural Housing)",
+      "category": "Housing"
+    },
+    {
+      "id": "pmay-urban",
+      "name": "Pradhan Mantri Awas Yojana - Urban (Housing for All)",
+      "category": "Housing"
+    },
+    {
+      "id": "sukanya-samriddhi",
+      "name": "Sukanya Samriddhi Yojana",
+      "category": "Women and Child"
+    },
+    {
+      "id": "beti-bachao-beti-padhao",
+      "name": "Beti Bachao Beti Padhao",
+      "category": "Women and Child"
+    },
+    {
+      "id": "pm-ujjwala",
+      "name": "Pradhan Mantri Ujjwala Yojana",
+      "category": "Women and Child"
+    },
+    {
+      "id": "pmkvy",
+      "name": "Pradhan Mantri Kaushal Vikas Yojana (PMKVY)",
+      "category": "Employment and Skills"
+    },
+    {
+      "id": "pmsby",
+      "name": "Pradhan Mantri Suraksha Bima Yojana",
+      "category": "Financial Assistance"
+    },
+    {
+      "id": "pmjjby",
+      "name": "Pradhan Mantri Jeevan Jyoti Bima Yojana",
+      "category": "Financial Assistance"
+    },
+    {
+      "id": "apy",
+      "name": "Atal Pension Yojana",
+      "category": "Financial Assistance"
+    },
+    {
+      "id": "pm-jan-dhan",
+      "name": "Pradhan Mantri Jan Dhan Yojana",
+      "category": "Financial Assistance"
+    },
+    {
+      "id": "national-food-security",
+      "name": "National Food Security Act (PDS) - Ration Card Scheme",
+      "category": "Financial Assistance"
+    },
+    {
+      "id": "ignoaps",
+      "name": "Indira Gandhi National Old Age Pension Scheme",
+      "category": "Senior Citizens"
+    },
+    {
+      "id": "vay-vandana",
+      "name": "Pradhan Mantri Vaya Vandana Yojana",
+      "category": "Senior Citizens"
+    },
+    {
+      "id": "pmfby",
+      "name": "Pradhan Mantri Fasal Bima Yojana (Crop Insurance)",
+      "category": "Agriculture"
+    },
+    {
+      "id": "ugc-scholarship",
+      "name": "UGC National Fellowship for SC Students (Rajiv Gandhi National Fellowship)",
+      "category": "Education and Scholarship"
+    },
+    {
+      "id": "diksha-disability-scholarship",
+      "name": "National Overseas Scholarship for Persons with Disabilities",
+      "category": "Disability Support"
+    },
+    {
+      "id": "unique-disability-id",
+      "name": "Unique Disability ID (UDID) Card",
+      "category": "Disability Support"
+    },
+    {
+      "id": "deendayal-disability-rehab",
+      "name": "Deendayal Disabled Rehabilitation Scheme (DDRS)",
+      "category": "Disability Support"
+    },
+    {
+      "id": "nrega",
+      "name": "Mahatma Gandhi National Rural Employment Guarantee Scheme (MGNREGS)",
+      "category": "Employment and Skills"
+    },
+    {
+      "id": "stand-up-india",
+      "name": "Stand-Up India Scheme",
+      "category": "Employment and Skills"
+    }
+  ]
+}

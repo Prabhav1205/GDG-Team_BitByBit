@@ -44,6 +44,9 @@ import { getApiBaseUrl } from '@/constants/api-config';
 import sampleGesturesData from '@/constants/sample-gestures.json';
 import { useSession } from '@/context/SessionContext';
 import { speechEngine } from '@/services/speech-engine';
+import { useSchemeSearch } from '@/hooks/use-scheme-search';
+import { SchemeResultsPanel } from '@/components/access/SchemeResultsPanel';
+import { GESTURE_QUERY_MAP } from '@/constants/gesture-query-map';
 
 function buildMediapipeWebViewHtml(apiBaseUrl: string): string {
   return `<!DOCTYPE html>
@@ -419,6 +422,7 @@ export default function SignLanguagePage() {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const [sentMessage, setSentMessage] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
+  const schemeSearch = useSchemeSearch();
 
   const videoRef = useRef<any>(null);
   const canvasRef = useRef<any>(null);
@@ -1039,7 +1043,39 @@ export default function SignLanguagePage() {
                 </Text>
               </Pressable>
             </View>
+
+            {/* Find Schemes button — appears when gesture/text is recognized */}
+            {Boolean(activeGesture || recognizedText) && (
+              <Pressable
+                style={({ pressed }: any) => [
+                  styles.findSchemesBtn,
+                  pressed && styles.findSchemesBtnPressed,
+                  schemeSearch.loading && styles.actionBtnDisabled,
+                ]}
+                onPress={() => {
+                  const query = (activeGesture && GESTURE_QUERY_MAP[activeGesture]) ? GESTURE_QUERY_MAP[activeGesture] : (recognizedText || 'government assistance schemes');
+                  schemeSearch.search(query);
+                }}
+                disabled={schemeSearch.loading}
+                accessibilityRole="button"
+                accessibilityLabel="Find relevant government schemes for this gesture"
+                testID="sign-find-schemes-btn"
+              >
+                <Text style={styles.findSchemesBtnText}>
+                  {schemeSearch.loading ? '⏳ Searching Schemes…' : '🔍 Find Government Schemes'}
+                </Text>
+              </Pressable>
+            )}
           </View>
+
+          {/* Scheme results from RAG — shown after Find Schemes is tapped */}
+          {(schemeSearch.results.length > 0 || schemeSearch.loading || schemeSearch.error) && (
+            <SchemeResultsPanel
+              results={schemeSearch.results}
+              loading={schemeSearch.loading}
+              error={schemeSearch.error}
+            />
+          )}
 
           {/* ── ISL Gesture Quick Options ─────────────────────────────── */}
           <View style={styles.phrasesSection}>
@@ -1327,6 +1363,21 @@ function useStyles() {
     fontWeight: AccessFontWeight.semibold,
   },
   actionBtnDisabledText: { color: AccessColors.textTertiary },
+  findSchemesBtn: {
+    backgroundColor: AccessColors.tealDark,
+    borderRadius: AccessRadius.sm,
+    paddingVertical: AccessSpacing.md,
+    paddingHorizontal: AccessSpacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  findSchemesBtnPressed: { opacity: 0.8 },
+  findSchemesBtnText: {
+    fontSize: AccessFontSize.sm,
+    fontWeight: AccessFontWeight.semibold,
+    color: '#FFFFFF',
+  },
 
   // ── Quick Phrase Gestures ──────────────────────────────────────────────────
   phrasesSection: {

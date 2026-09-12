@@ -23,6 +23,7 @@ logger = logging.getLogger("isl-api")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODEL_PATH = PROJECT_ROOT / "models" / "isl_model.pkl"
+ONNX_MODEL_PATH = PROJECT_ROOT / "models" / "isl_model.onnx"
 CONFIG_PATH = PROJECT_ROOT / "config" / "gestures.json"
 METADATA_PATH = PROJECT_ROOT / "models" / "model_metadata.json"
 
@@ -30,28 +31,62 @@ METADATA_PATH = PROJECT_ROOT / "models" / "model_metadata.json"
 from src.hand_tracker import MEDIAPIPE_AVAILABLE
 from src.predictor import GesturePredictor, ModelNotLoadedError
 
-# Singleton predictor instance
-predictor: Optional[GesturePredictor] = None
+# Singleton predictor instance — either ONNX or sklearn depending on availability
+predictor: Optional[Any] = None
+_inference_backend: str = "sklearn"
+_onnx_model_loaded: bool = False
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle manager to load model and resources on startup."""
-    global predictor
+    global predictor, _inference_backend, _onnx_model_loaded
+
     logger.info("Initializing ISL Predictor service...")
-    try:
-        predictor = GesturePredictor(
-            model_path=MODEL_PATH,
-            gestures_config_path=CONFIG_PATH,
-            metadata_path=METADATA_PATH,
-        )
-        if predictor.is_loaded:
-            logger.info("Gesture model successfully loaded into memory.")
-        else:
-            logger.warning("Predictor initialized but model file is missing. Inference will be disabled until trained.")
-    except Exception as e:
-        logger.error(f"Failed to initialize predictor: {e}")
-        predictor = None
+
+    # Attempt ONNX predictor first (preferred for edge deployment)
+    if ONNX_MODEL_PATH.exists():
+        try:
+            import sys as _sys
+            _sys.path.insert(0, str(PROJECT_ROOT))
+            from src.onnx_predictor import OnnxGesturePredictor
+
+            onnx_pred = OnnxGesturePredictor(
+                onnx_path=ONNX_MODEL_PATH,
+                gestures_config_path=CONFIG_PATH,
+                metadata_path=METADATA_PATH,
+            )
+            if onnx_pred.is_loaded:
+                predictor = onnx_pred
+                _inference_backend = "onnx"
+                _onnx_model_loaded = True
+                logger.info("ONNX gesture model loaded — edge inference active.")
+            else:
+                logger.warning("ONNX predictor init failed; falling back to sklearn.")
+        except Exception as e:
+            logger.warning("Failed to init ONNX predictor: %s — falling back to sklearn.", e)
+
+    # Fall back to sklearn GesturePredictor
+    if predictor is None:
+        try:
+            sklearn_pred = GesturePredictor(
+                model_path=MODEL_PATH,
+                gestures_config_path=CONFIG_PATH,
+                metadata_path=METADATA_PATH,
+            )
+            predictor = sklearn_pred
+            _inference_backend = "sklearn"
+            _onnx_model_loaded = False
+            if sklearn_pred.is_loaded:
+                logger.info("sklearn gesture model successfully loaded into memory.")
+            else:
+                logger.warning(
+                    "sklearn Predictor initialized but model file is missing. "
+                    "Inference will be disabled until trained."
+                )
+        except Exception as e:
+            logger.error("Failed to initialize sklearn predictor: %s", e)
+            predictor = None
 
     yield
     logger.info("Shutting down ISL Predictor service.")
@@ -60,7 +95,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ISL Institutional Accessibility Kiosk API",
     description="Inference and configuration service for Indian Sign Language recognition module.",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -152,6 +187,8 @@ class HealthResponse(BaseModel):
     mediapipe_available: bool
     model_loaded: bool
     model_version: str
+    inference_backend: str
+    onnx_model_loaded: bool
 
 
 class ModelInfoResponse(BaseModel):
@@ -193,6 +230,8 @@ async def get_health():
         mediapipe_available=MEDIAPIPE_AVAILABLE,
         model_loaded=is_loaded,
         model_version=version,
+        inference_backend=_inference_backend,
+        onnx_model_loaded=_onnx_model_loaded,
     )
 
 
@@ -283,8 +322,9 @@ class SchemeSearchRequest(BaseModel):
 async def search_schemes(payload: SchemeSearchRequest):
     """Offline semantic search over government schemes database.
 
-    Called by the React frontend (text.tsx, sign.tsx) to surface relevant
-    government benefit schemes based on spoken/typed user needs.
+    Called by the React frontend (text.tsx, sign.tsx, voice.tsx, assisted-touch.tsx)
+    to surface relevant government benefit schemes based on spoken/typed user needs.
+    Uses FAISS vector search when index is built, falls back to keyword matching.
     """
     if _scheme_retriever is None:
         raise HTTPException(
@@ -297,10 +337,37 @@ async def search_schemes(payload: SchemeSearchRequest):
             top_k=payload.top_k,
             user_details=payload.user_details,
         )
-        return {"matches": matches}
+        return {
+            "query": payload.query,
+            "matches": matches,
+            "count": len(matches),
+            "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        }
     except Exception as exc:
         logger.error(f"Scheme search error: {exc}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Scheme search encountered an unexpected error.",
+        )
+
+
+@app.get("/api/schemes/categories", tags=["Schemes"])
+async def get_scheme_categories():
+    """Return all available scheme categories in the dataset.
+
+    Used by the Assisted Touch frontend to populate category buttons.
+    """
+    if _scheme_retriever is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Scheme retriever is not available.",
+        )
+    try:
+        categories = _scheme_retriever.get_categories()
+        return {"categories": categories, "count": len(categories)}
+    except Exception as exc:
+        logger.error(f"Categories fetch error: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not retrieve scheme categories.",
         )

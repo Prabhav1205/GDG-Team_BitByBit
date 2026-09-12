@@ -18,6 +18,7 @@ export interface SpeakOptions {
 
 export type VoiceAction =
   | { type: 'NAVIGATE'; route: string; mode: string }
+  | { type: 'CHANGE_LANGUAGE'; language: 'en' | 'hi' | 'mr' }
   | { type: 'REQUEST_STAFF' }
   | { type: 'STOP_SPEECH' }
   | { type: 'READ_SCREEN' }
@@ -122,12 +123,20 @@ class SpeechEngineService {
       };
 
       this.recognition.onend = () => {
-        if (this.isListeningActive && options.continuous) {
-          // Restart continuous listening if still active
+        if (this.isListeningActive && (options.continuous ?? true)) {
+          // Restart continuous listening if still active across page changes
           try {
             this.recognition?.start();
           } catch {
-            this.isListeningActive = false;
+            setTimeout(() => {
+              if (this.isListeningActive) {
+                try {
+                  this.recognition?.start();
+                } catch {
+                  // ignore
+                }
+              }
+            }, 300);
           }
         } else {
           this.isListeningActive = false;
@@ -162,7 +171,7 @@ class SpeechEngineService {
     return this.isListeningActive;
   }
 
-  /** Parse spoken transcript into a navigation or UI action */
+  /** Parse spoken transcript into a navigation or UI action (Multilingual EN/HI/MR) */
   public parseVoiceCommand(transcript: string): VoiceAction {
     const text = transcript.toLowerCase().trim();
 
@@ -170,49 +179,159 @@ class SpeechEngineService {
       return { type: 'UNKNOWN', query: '' };
     }
 
-    // Stop command
-    if (text.includes('stop') || text.includes('quiet') || text.includes('silence') || text.includes('mute')) {
+    // 1. Stop / Silence / Mute
+    if (
+      text.includes('stop') ||
+      text.includes('quiet') ||
+      text.includes('silence') ||
+      text.includes('mute') ||
+      text.includes('रुकें') ||
+      text.includes('थांबा') ||
+      text.includes('शांत')
+    ) {
       return { type: 'STOP_SPEECH' };
     }
 
-    // Help / Staff assistance
+    // 2. Help / Staff assistance
     if (
       text.includes('help') ||
       text.includes('staff') ||
       text.includes('assistance') ||
-      text.includes('assistant')
+      text.includes('officer') ||
+      text.includes('nurse') ||
+      text.includes('human') ||
+      text.includes('मदद') ||
+      text.includes('सहायता') ||
+      text.includes('स्टाफ') ||
+      text.includes('कर्मचारी') ||
+      text.includes('मदत') ||
+      text.includes('अधिकारी')
     ) {
       return { type: 'REQUEST_STAFF' };
     }
 
-    // Read screen summary
-    if (text.includes('repeat') || text.includes('read') || text.includes('where am i') || text.includes('options')) {
-      return { type: 'READ_SCREEN' };
+    // 3. Language Switching
+    if (text.includes('hindi') || text.includes('हिंदी') || text.includes('हिन्दी')) {
+      return { type: 'CHANGE_LANGUAGE', language: 'hi' };
+    }
+    if (text.includes('marathi') || text.includes('मराठी')) {
+      return { type: 'CHANGE_LANGUAGE', language: 'mr' };
+    }
+    if (text.includes('english') || text.includes('अंग्रेजी') || text.includes('इंग्रजी') || text.includes('इंग्लिश')) {
+      return { type: 'CHANGE_LANGUAGE', language: 'en' };
     }
 
-    // Navigation: Sign Language
-    if (text.includes('sign') || text.includes('gesture') || text.includes('deaf') || text.includes('option 1') || text.includes('one')) {
+    // 4. Navigation: Sign Language
+    if (
+      text.includes('sign') ||
+      text.includes('gesture') ||
+      text.includes('isl') ||
+      text.includes('deaf') ||
+      text.includes('साइन') ||
+      text.includes('सांकेतिक') ||
+      text.includes('इशार') ||
+      text.includes('हस्तभाषा') ||
+      text.includes('बधिर') ||
+      text.includes('मुकबधिर') ||
+      text.includes('हातवारे')
+    ) {
       return { type: 'NAVIGATE', route: '/sign', mode: 'sign' };
     }
 
-    // Navigation: Voice
-    if (text.includes('voice') || text.includes('speak') || text.includes('talk') || text.includes('option 2') || text.includes('two')) {
+    // 5. Navigation: Voice
+    if (
+      text.includes('voice') ||
+      text.includes('speak') ||
+      text.includes('talk') ||
+      text.includes('audio') ||
+      text.includes('बोलकर') ||
+      text.includes('आवाज़') ||
+      text.includes('ध्वनि') ||
+      text.includes('आवाज')
+    ) {
       return { type: 'NAVIGATE', route: '/voice', mode: 'voice' };
     }
 
-    // Navigation: Text
-    if (text.includes('text') || text.includes('type') || text.includes('keyboard') || text.includes('option 3') || text.includes('three')) {
+    // 6. Navigation: Text
+    if (
+      text.includes('text') ||
+      text.includes('type') ||
+      text.includes('keyboard') ||
+      text.includes('लिखकर') ||
+      text.includes('टेक्स्ट') ||
+      text.includes('टाइप')
+    ) {
       return { type: 'NAVIGATE', route: '/text', mode: 'text' };
     }
 
-    // Navigation: Assisted Touch
-    if (text.includes('touch') || text.includes('assisted') || text.includes('large') || text.includes('option 4') || text.includes('four')) {
+    // 7. Navigation: Assisted Touch
+    if (
+      text.includes('touch') ||
+      text.includes('assisted') ||
+      text.includes('large target') ||
+      text.includes('dwell') ||
+      text.includes('टच') ||
+      text.includes('स्पर्श')
+    ) {
       return { type: 'NAVIGATE', route: '/assisted-touch', mode: 'assisted-touch' };
     }
 
-    // Navigation: Home / Back
-    if (text.includes('back') || text.includes('home') || text.includes('main menu') || text.includes('start over')) {
+    // 8. Navigation: Settings / Accessibility preferences
+    if (
+      text.includes('setting') ||
+      text.includes('settings') ||
+      text.includes('preference') ||
+      text.includes('contrast') ||
+      text.includes('font size') ||
+      text.includes('सेटिंग्स') ||
+      text.includes('सेटिंग')
+    ) {
+      return { type: 'NAVIGATE', route: '/settings', mode: '' };
+    }
+
+    // 9. Navigation: Eligibility / Schemes
+    if (
+      text.includes('scheme') ||
+      text.includes('schemes') ||
+      text.includes('eligibility') ||
+      text.includes('benefit') ||
+      text.includes('pension') ||
+      text.includes('adip') ||
+      text.includes('योजना') ||
+      text.includes('पात्रता') ||
+      text.includes('पेंशन') ||
+      text.includes('अर्ज') ||
+      text.includes('लाभ')
+    ) {
+      return { type: 'NAVIGATE', route: '/eligibility', mode: '' };
+    }
+
+    // 10. Navigation: Home / Back / Main Menu
+    if (
+      text.includes('back') ||
+      text.includes('home') ||
+      text.includes('main menu') ||
+      text.includes('start over') ||
+      text.includes('exit') ||
+      text.includes('done') ||
+      text.includes('मुख्य मेनू') ||
+      text.includes('वापस') ||
+      text.includes('बाहेर') ||
+      text.includes('मागे')
+    ) {
       return { type: 'NAVIGATE', route: '/', mode: '' };
+    }
+
+    // 11. Read screen summary
+    if (
+      text.includes('repeat') ||
+      text.includes('read') ||
+      text.includes('where am i') ||
+      text.includes('options') ||
+      text.includes('दोहराएं') ||
+      text.includes('पुन्हा सांगा')
+    ) {
+      return { type: 'READ_SCREEN' };
     }
 
     return { type: 'UNKNOWN', query: text };

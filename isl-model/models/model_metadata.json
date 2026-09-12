@@ -154,5 +154,7 @@
       98
     ]
   ],
-  "underperforming_classes": []
+  "underperforming_classes": [],
+  "onnx_model_path": "isl_model.onnx",
+  "onnx_opset_version": 15
 }

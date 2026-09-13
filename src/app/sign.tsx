@@ -119,47 +119,79 @@ function buildMediapipeWebViewHtml(apiBaseUrl: string): string {
       [5,9],[9,13],[13,17]
     ];
 
-    // ── Rule-based offline gesture classifier ──────────────────────────────
-    // Determines if fingers are extended relative to their MCP joints.
-    // Used as fallback when API is unreachable.
+    function getDistance(p1, p2) {
+      if (!p1 || !p2) return 999;
+      const dx = p1.x - p2.x;
+      const dy = p1.y - p2.y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // ── Orientation-Invariant Distance Classifier ───────────────────────────
     function getExtendedFingers(lm) {
-      // Returns array of booleans [thumb, index, middle, ring, pinky]
-      // Tips: 4, 8, 12, 16, 20  |  PIP: 3, 7, 11, 15, 19  |  MCP: 2, 6, 10, 14, 18
-      const tips = [4, 8, 12, 16, 20];
-      const pips = [3, 7, 11, 15, 19];
-      const mcps = [2, 6, 10, 14, 18];
-      const wrist = lm[0];
-      return tips.map((tip, i) => {
-        const tipY = lm[tip].y;
-        const pipY = lm[pips[i]].y;
-        if (i === 0) {
-          // Thumb: compare x distance from wrist instead
-          return Math.abs(lm[tip].x - lm[mcps[i]].x) > 0.06;
-        }
-        return tipY < pipY - 0.02;
-      });
+      const w = lm[0]; // Wrist origin
+      // A finger is extended if tip is farther from wrist than PIP joint
+      const idxExt = getDistance(w, lm[8]) > getDistance(w, lm[6]) * 1.15;
+      const midExt = getDistance(w, lm[12]) > getDistance(w, lm[10]) * 1.15;
+      const ringExt = getDistance(w, lm[16]) > getDistance(w, lm[14]) * 1.15;
+      const pinkyExt = getDistance(w, lm[20]) > getDistance(w, lm[18]) * 1.15;
+      // Thumb extended if thumb tip is far from pinky MCP
+      const thumbExt = getDistance(lm[4], lm[17]) > getDistance(lm[2], lm[17]) * 1.25;
+
+      return [thumbExt, idxExt, midExt, ringExt, pinkyExt];
     }
 
     function classifyOffline(lm) {
       if (!lm || lm.length < 21) return null;
       const [thumb, idx, mid, ring, pinky] = getExtendedFingers(lm);
-      const allFolded = !thumb && !idx && !mid && !ring && !pinky;
-      const allExtended = thumb && idx && mid && ring && pinky;
+      const fourFingers = [idx, mid, ring, pinky];
+      const extendedFourCount = fourFingers.filter(Boolean).length;
       const peaceSign = !thumb && idx && mid && !ring && !pinky;
-      const pointingUp = !thumb && idx && !mid && !ring && !pinky;
-      const thumbUp = thumb && !idx && !mid && !ring && !pinky;
-      const wristY = lm[0].y;
+      const indexOnly = idx && !mid && !ring && !pinky;
+      
+      const thumbIndexDist = getDistance(lm[4], lm[8]);
+      const isPinching = thumbIndexDist < 0.075;
 
-      if (allExtended) return { gesture: 'WHERE', confidence: 0.72 };       // Open palm
-      if (peaceSign) return { gesture: 'YES', confidence: 0.70 };            // Peace/V sign
-      if (allFolded) return { gesture: 'NO', confidence: 0.68 };             // Fist
-      if (pointingUp && wristY > 0.5) return { gesture: 'HELP', confidence: 0.68 };
-      if (thumbUp) return { gesture: 'FINISH', confidence: 0.66 };           // Thumbs up
-      if (thumb && idx && !mid && !ring && !pinky) return { gesture: 'MONEY', confidence: 0.65 };
-      if (!thumb && !idx && !mid && ring && pinky) return { gesture: 'APPOINTMENT', confidence: 0.64 };
-      if (thumb && idx && mid && !ring && !pinky) return { gesture: 'FORM', confidence: 0.63 };
-      if (thumb && idx && mid && ring && !pinky) return { gesture: 'THANK_YOU', confidence: 0.62 };
-      if (!thumb && idx && !mid && !ring && pinky) return { gesture: 'ID', confidence: 0.61 };
+      // 1. WHERE: Open Palm / Flat Hand / Direction inquiry (3 or 4 fingers extended)
+      // Open hand is prioritized so it is never misclassified as FINISH
+      if (extendedFourCount >= 3) {
+        return { gesture: 'WHERE', confidence: 0.90 };
+      }
+
+      // 2. PEACE SIGN (V) -> YES
+      if (peaceSign) return { gesture: 'YES', confidence: 0.88 };
+
+      // 3. PINCHING THUMB & INDEX (Cash / Money / Payment rubbing) -> MONEY
+      if (isPinching && extendedFourCount <= 1) {
+        return { gesture: 'MONEY', confidence: 0.88 };
+      }
+
+      // 4. INDEX EXTENDED POINTING / WAGGING (without pinch) -> NO
+      if ((indexOnly || (thumb && idx && !mid && !ring && !pinky)) && !isPinching) {
+        return { gesture: 'NO', confidence: 0.86 };
+      }
+
+      // 5. THUMBS UP: True fist (all 4 fingers folded) and thumb pointing UP above wrist -> FINISH
+      const isTrueFist = extendedFourCount === 0;
+      const isThumbPointingUp = lm[4].y < lm[2].y - 0.05;
+      if (isTrueFist && thumb && isThumbPointingUp) {
+        return { gesture: 'FINISH', confidence: 0.88 };
+      }
+
+      // 6. THUMB + INDEX + MIDDLE -> FORM
+      if (thumb && idx && mid && !ring && !pinky) return { gesture: 'FORM', confidence: 0.82 };
+
+      // 7. PINKY + INDEX (Rock / ID) -> ID
+      if (!thumb && idx && !mid && !ring && pinky) return { gesture: 'ID', confidence: 0.80 };
+
+      // 8. RING + PINKY -> APPOINTMENT
+      if (!thumb && !idx && !mid && ring && pinky) return { gesture: 'APPOINTMENT', confidence: 0.80 };
+
+      // 9. 4 FINGERS EXTENDED WITHOUT THUMB -> THANK YOU
+      if (!thumb && extendedFourCount === 4) return { gesture: 'THANK_YOU', confidence: 0.80 };
+
+      // 10. POINTING HIGH -> HELP
+      if (idx && lm[0].y > 0.45 && !ring && !pinky) return { gesture: 'HELP', confidence: 0.78 };
+
       return null;
     }
 
@@ -406,6 +438,73 @@ function loadScript(src: string): Promise<void> {
     script.onerror = (err) => reject(err);
     document.head.appendChild(script);
   });
+}
+
+function getLandmarkDist(p1: { x: number; y: number; z?: number }, p2: { x: number; y: number; z?: number }) {
+  if (!p1 || !p2) return 999;
+  const dx = p1.x - p2.x;
+  const dy = p1.y - p2.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function classifyOfflineLandmarks(lm: { x: number; y: number; z?: number }[]): { gesture: string; confidence: number } | null {
+  if (!lm || lm.length < 21) return null;
+  const w = lm[0];
+  const idxExt = getLandmarkDist(w, lm[8]) > getLandmarkDist(w, lm[6]) * 1.15;
+  const midExt = getLandmarkDist(w, lm[12]) > getLandmarkDist(w, lm[10]) * 1.15;
+  const ringExt = getLandmarkDist(w, lm[16]) > getLandmarkDist(w, lm[14]) * 1.15;
+  const pinkyExt = getLandmarkDist(w, lm[20]) > getLandmarkDist(w, lm[18]) * 1.15;
+  const thumbExt = getLandmarkDist(lm[4], lm[17]) > getLandmarkDist(lm[2], lm[17]) * 1.25;
+
+  const fourFingers = [idxExt, midExt, ringExt, pinkyExt];
+  const extendedFourCount = fourFingers.filter(Boolean).length;
+  const peaceSign = !thumbExt && idxExt && midExt && !ringExt && !pinkyExt;
+  const indexOnly = idxExt && !midExt && !ringExt && !pinkyExt;
+
+  const thumbIndexDist = getLandmarkDist(lm[4], lm[8]);
+  const isPinching = thumbIndexDist < 0.075;
+
+  // 1. WHERE: Open Palm / Flat Hand / Direction inquiry (3 or 4 fingers extended)
+  if (extendedFourCount >= 3) {
+    return { gesture: 'WHERE', confidence: 0.90 };
+  }
+
+  // 2. PEACE SIGN (V) -> YES
+  if (peaceSign) return { gesture: 'YES', confidence: 0.88 };
+
+  // 3. PINCHING THUMB & INDEX (Cash / Money / Payment rubbing) -> MONEY
+  if (isPinching && extendedFourCount <= 1) {
+    return { gesture: 'MONEY', confidence: 0.88 };
+  }
+
+  // 4. INDEX EXTENDED POINTING / WAGGING (without pinch) -> NO
+  if ((indexOnly || (thumbExt && idxExt && !midExt && !ringExt && !pinkyExt)) && !isPinching) {
+    return { gesture: 'NO', confidence: 0.86 };
+  }
+
+  // 5. THUMBS UP: True fist (all 4 fingers folded) and thumb pointing UP above wrist -> FINISH
+  const isTrueFist = extendedFourCount === 0;
+  const isThumbPointingUp = lm[4].y < lm[2].y - 0.05;
+  if (isTrueFist && thumbExt && isThumbPointingUp) {
+    return { gesture: 'FINISH', confidence: 0.88 };
+  }
+
+  // 6. THUMB + INDEX + MIDDLE -> FORM
+  if (thumbExt && idxExt && midExt && !ringExt && !pinkyExt) return { gesture: 'FORM', confidence: 0.82 };
+
+  // 7. PINKY + INDEX (Rock / ID) -> ID
+  if (!thumbExt && idxExt && !midExt && !ringExt && pinkyExt) return { gesture: 'ID', confidence: 0.80 };
+
+  // 8. RING + PINKY -> APPOINTMENT
+  if (!thumbExt && !idxExt && !midExt && ringExt && pinkyExt) return { gesture: 'APPOINTMENT', confidence: 0.80 };
+
+  // 9. 4 FINGERS EXTENDED WITHOUT THUMB -> THANK YOU
+  if (!thumbExt && extendedFourCount === 4) return { gesture: 'THANK_YOU', confidence: 0.80 };
+
+  // 10. POINTING HIGH -> HELP
+  if (idxExt && lm[0].y > 0.45 && !ringExt && !pinkyExt) return { gesture: 'HELP', confidence: 0.78 };
+
+  return null;
 }
 
 export default function SignLanguagePage() {
@@ -744,10 +843,25 @@ export default function SignLanguagePage() {
 
         if (finalGesture && finalGesture !== 'UNKNOWN') {
           handleRecognizedGesture(finalGesture, finalConf);
+        } else {
+          // Fallback to rule-based classifier
+          const offline = classifyOfflineLandmarks(landmarks);
+          if (offline) {
+            handleRecognizedGesture(offline.gesture, offline.confidence);
+          }
+        }
+      } else {
+        const offline = classifyOfflineLandmarks(landmarks);
+        if (offline) {
+          handleRecognizedGesture(offline.gesture, offline.confidence);
         }
       }
     } catch (err) {
       console.warn('Prediction API call failed:', err);
+      const offline = classifyOfflineLandmarks(landmarks);
+      if (offline) {
+        handleRecognizedGesture(offline.gesture, offline.confidence);
+      }
     } finally {
       isPredicting.current = false;
     }

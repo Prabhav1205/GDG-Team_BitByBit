@@ -28,16 +28,18 @@ METADATA_PATH = PROJECT_ROOT / "models" / "model_metadata.json"
 # Import domain modules
 from src.hand_tracker import MEDIAPIPE_AVAILABLE
 from src.predictor import GesturePredictor, ModelNotLoadedError
+from rag.retriever import SchemeRetriever
 
-# Singleton predictor instance
+# Singleton instances
 predictor: Optional[GesturePredictor] = None
+scheme_retriever: Optional[SchemeRetriever] = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle manager to load model and resources on startup."""
-    global predictor
-    logger.info("Initializing ISL Predictor service...")
+    global predictor, scheme_retriever
+    logger.info("Initializing ISL Predictor & RAG Scheme service...")
     try:
         predictor = GesturePredictor(
             model_path=MODEL_PATH,
@@ -51,6 +53,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to initialize predictor: {e}")
         predictor = None
+
+    try:
+        scheme_retriever = SchemeRetriever()
+        logger.info(f"SchemeRetriever loaded {len(scheme_retriever.schemes)} welfare schemes.")
+    except Exception as e:
+        logger.error(f"Failed to initialize SchemeRetriever: {e}")
+        scheme_retriever = None
 
     yield
     logger.info("Shutting down ISL Predictor service.")
@@ -266,3 +275,54 @@ async def predict_gesture(payload: PredictRequest):
         )
     finally:
         predictor.confidence_threshold = original_threshold
+
+
+# ---------------------------------------------------------
+# Scheme Search (RAG) Endpoints
+# ---------------------------------------------------------
+
+class SchemeSearchRequest(BaseModel):
+    query: str = Field(..., description="User query describing needed service, health, or welfare support")
+    user_details: Optional[Dict[str, Any]] = Field(None, description="Optional user age, income, category context")
+    top_k: Optional[int] = Field(5, ge=1, le=20, description="Max number of matching schemes to return")
+
+
+class SchemeSearchResponse(BaseModel):
+    query: str
+    total_matches: int
+    matches: List[Dict[str, Any]]
+
+
+@app.post("/api/schemes/search", response_model=SchemeSearchResponse, tags=["Schemes"])
+@app.post("/schemes/search", response_model=SchemeSearchResponse, tags=["Schemes"])
+async def search_schemes(payload: SchemeSearchRequest):
+    """Searches national government welfare schemes matching citizen's query or gesture intent."""
+    retriever = scheme_retriever or SchemeRetriever()
+    try:
+        matches = retriever.search_schemes(
+            query=payload.query,
+            top_k=payload.top_k or 5,
+            user_details=payload.user_details,
+        )
+        return SchemeSearchResponse(
+            query=payload.query,
+            total_matches=len(matches),
+            matches=matches,
+        )
+    except Exception as e:
+        logger.error(f"Error executing scheme search: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Scheme search execution failed: {str(e)}",
+        )
+
+
+@app.get("/api/schemes", tags=["Schemes"])
+@app.get("/schemes", tags=["Schemes"])
+async def get_all_schemes():
+    """Returns the full catalog of indexed institutional welfare schemes."""
+    retriever = scheme_retriever or SchemeRetriever()
+    return {
+        "total": len(retriever.schemes),
+        "schemes": retriever.schemes,
+    }

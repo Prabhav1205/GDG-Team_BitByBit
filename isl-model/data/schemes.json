@@ -1,6 +1,80 @@
 [
-  {"id":"pmjay","name":"Ayushman Bharat - Pradhan Mantri Jan Arogya Yojana","category":"Healthcare","description":"Cashless secondary and tertiary hospitalisation cover for eligible poor and vulnerable families.","eligibility":["Government beneficiary identification is required."],"income_limit":null,"age_requirements":{"min":0,"max":120},"benefits":"Cashless hospitalisation coverage up to ₹5 lakh per family per year.","documents_required":["Identity or beneficiary details"],"source_url":"https://www.myscheme.gov.in/schemes/ab-pmjay","searchable_text":"healthcare hospital medical treatment insurance ayushman cashless family"},
-  {"id":"adip","name":"ADIP Assistance for Purchase/Fitting of Aids & Appliances","category":"Disability Support","description":"Assistance for eligible persons with disabilities to obtain durable assistive devices.","eligibility":["Disability certificate and income criteria apply."],"income_limit":240000,"age_requirements":{"min":0,"max":120},"benefits":"Free or subsidised aids and appliances such as hearing aids, wheelchairs and braille equipment.","documents_required":["Disability certificate","Income certificate","Identity proof"],"source_url":"https://depwd.gov.in/","searchable_text":"disability support assistive device wheelchair hearing aid braille speech visual locomotor"},
-  {"id":"nhfdc","name":"NHFDC Self-Employment & Skill Loan Scheme","category":"Employment and Skills","description":"Concessional finance for self-employment, education and skill training for eligible persons with disabilities.","eligibility":["Disability and scheme conditions apply."],"income_limit":500000,"age_requirements":{"min":18,"max":65},"benefits":"Concessional loans for business, education or skills.","documents_required":["Disability certificate","Income proof","Identity proof"],"source_url":"https://nhfdc.nic.in/","searchable_text":"disability employment job skill training business education loan financial help"},
-  {"id":"igndps","name":"Indira Gandhi National Disability Pension Scheme","category":"Financial Assistance","description":"Social assistance pension for eligible persons with severe disabilities.","eligibility":["BPL and disability conditions apply; verify current state implementation."],"income_limit":null,"age_requirements":{"min":18,"max":79},"benefits":"Monthly social assistance pension, with state top-ups where applicable.","documents_required":["Disability certificate","Income or BPL proof","Identity proof"],"source_url":"https://rural.gov.in/","searchable_text":"disability pension monthly money financial support poor income"}
+  {
+    "id": "pmjay",
+    "name": "Ayushman Bharat - Pradhan Mantri Jan Arogya Yojana",
+    "category": "Healthcare",
+    "description": "Cashless secondary and tertiary hospitalisation cover for eligible poor and vulnerable families.",
+    "eligibility": ["Government beneficiary identification is required."],
+    "income_limit": null,
+    "age_requirements": {"min": 0, "max": 120},
+    "benefits": "Cashless hospitalisation coverage up to ₹5 lakh per family per year.",
+    "documents_required": ["Aadhaar Card", "Ration Card", "Identity Proof"],
+    "source_url": "https://www.myscheme.gov.in/schemes/ab-pmjay",
+    "searchable_text": "healthcare hospital medical treatment insurance ayushman cashless health doctor surgery illness treatment hospitalisation"
+  },
+  {
+    "id": "adip",
+    "name": "ADIP Assistance for Purchase/Fitting of Aids & Appliances",
+    "category": "Disability Support",
+    "description": "Assistance for eligible persons with disabilities to obtain durable modern assistive devices.",
+    "eligibility": ["Disability certificate (min 40%) and income criteria apply."],
+    "income_limit": 240000,
+    "age_requirements": {"min": 0, "max": 120},
+    "benefits": "Free or subsidised aids and appliances such as hearing aids, wheelchairs, motorized tricycles, braille equipment, and prosthetics up to ₹15,000.",
+    "documents_required": ["Disability certificate", "Income certificate", "Aadhaar Card", "Photograph"],
+    "source_url": "https://depwd.gov.in/",
+    "searchable_text": "disability support assistive device wheelchair hearing aid braille speech visual locomotor aids appliances physical handicap"
+  },
+  {
+    "id": "nhfdc",
+    "name": "NHFDC Self-Employment & Skill Loan Scheme",
+    "category": "Employment and Skills",
+    "description": "Concessional finance and low-interest loans for self-employment, higher education and skill training for persons with disabilities.",
+    "eligibility": ["Disability certificate (min 40%) and scheme age conditions apply."],
+    "income_limit": 500000,
+    "age_requirements": {"min": 18, "max": 65},
+    "benefits": "Concessional interest rate loans (4% to 8% p.a.) up to ₹25 Lakhs for business startup, vocational skill development, or higher education.",
+    "documents_required": ["Disability certificate", "Income proof", "Identity proof", "Business / Project Proposal"],
+    "source_url": "https://nhfdc.nic.in/",
+    "searchable_text": "disability employment job skill training business education loan financial help startup money credit finance"
+  },
+  {
+    "id": "igndps",
+    "name": "Indira Gandhi National Disability Pension Scheme (IGNDPS)",
+    "category": "Financial Assistance",
+    "description": "Monthly direct financial assistance pension for eligible persons with severe disabilities.",
+    "eligibility": ["BPL ration card and severe disability (80%+) conditions apply."],
+    "income_limit": 300000,
+    "age_requirements": {"min": 18, "max": 79},
+    "benefits": "Monthly social assistance pension allowance directly credited to bank account.",
+    "documents_required": ["Disability certificate (80%+)", "BPL proof / Income certificate", "Bank Passbook", "Aadhaar Card"],
+    "source_url": "https://rural.gov.in/",
+    "searchable_text": "disability pension monthly money financial support poor income allowance cash assistance severe"
+  },
+  {
+    "id": "scholarship-pwd",
+    "name": "National Scholarship Scheme for Students with Disabilities (Pre & Post Matric)",
+    "category": "Education",
+    "description": "Scholarships and educational grants for students with disabilities studying from Class 9 up to Post Graduation and PhD.",
+    "eligibility": ["Disability certificate (min 40%), enrolled in recognized educational institution."],
+    "income_limit": 250000,
+    "age_requirements": {"min": 8, "max": 35},
+    "benefits": "Monthly maintenance allowance up to ₹4,000/month, annual book allowance, reader allowance for visually impaired, and tuition reimbursement.",
+    "documents_required": ["Disability certificate", "Parental income certificate", "Previous Year Marksheet", "Student Bank Passbook", "Fee Receipt"],
+    "source_url": "https://scholarships.gov.in/",
+    "searchable_text": "scholarship education student school college study university financial grant books fees tuition student disabled disability"
+  },
+  {
+    "id": "udid-card",
+    "name": "Unique Disability ID (UDID) Card Scheme",
+    "category": "Disability Support",
+    "description": "National database and universal smart card for Persons with Disabilities providing streamlined access to all government benefits across India.",
+    "eligibility": ["Any Indian citizen with certified benchmark disability."],
+    "income_limit": null,
+    "age_requirements": {"min": 0, "max": 120},
+    "benefits": "Single universal identity card accepted across all transport, hospitals, railway concessions, and welfare schemes nationwide.",
+    "documents_required": ["Medical Certificate", "Aadhaar Card", "Passport Photo"],
+    "source_url": "https://www.swavlambancard.gov.in/",
+    "searchable_text": "udid card disability identity proof universal smart card railway concession travel pass"
+  }
 ]
